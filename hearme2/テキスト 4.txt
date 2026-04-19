@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="hearme">
+<title>hearme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─── あなたのデザインを維持するためのスタイル ─── */
+:root{
+  --bg:#080809;--s1:#101113;--s2:#18191c;--s3:#202226;--s4:#28292e;
+  --ln:rgba(255,255,255,.055);--ln2:rgba(255,255,255,.10);
+  --tx:#edecea;--tx2:#83868f;--tx3:#44464d;
+  --accent:#5b8dff;
+}
+body { background: var(--bg); color: var(--tx); font-family: 'DM Sans', sans-serif; margin: 0; }
+.page { display: none; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+.page.on { display: block; }
+.card { background: var(--s1); border-radius: 20px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--ln); }
+.btn { background: var(--accent); color: #fff; border: none; padding: 14px; border-radius: 40px; font-weight: 600; width: 100%; cursor: pointer; }
+input, textarea { width: 100%; background: var(--s2); border: 1px solid var(--ln2); color: #fff; padding: 12px; border-radius: 12px; box-sizing: border-box; margin-bottom: 10px; }
+.blur { filter: blur(12px); pointer-events: none; opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<div id="p-login" class="page">
+    <h1 style="font-family:'Syne'; font-size:40px;">hearme</h1>
+    <p style="color:var(--tx2);">あなたの表示名を設定してください</p>
+    <input type="text" id="user-name-input" placeholder="例：Kaito">
+    <button class="btn" onclick="saveUserName()">はじめる</button>
+</div>
+
+<div id="p-home" class="page">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-family:'Syne'; margin:0;">hearme</h2>
+        <button onclick="go('post')" style="background:var(--s2); color:var(--accent); border:none; width:40px; height:40px; border-radius:50%; font-size:24px;">+</button>
+    </div>
+    <div id="feed">
+        </div>
+</div>
+
+<div id="p-post" class="page">
+    <h2 style="font-family:'Syne';">What's your track?</h2>
+    <input type="text" id="song-in" placeholder="曲名">
+    <input type="text" id="artist-in" placeholder="アーティスト">
+    <textarea id="cmt-in" placeholder="今の気分は？" rows="4"></textarea>
+    <button class="btn" onclick="doPost()">みんなに届ける 🎵</button>
+    <button onclick="go('home')" style="background:none; border:none; color:var(--tx2); width:100%; margin-top:15px;">戻る</button>
+</div>
+
+<script type="module">
+// ──────────────────────────────────────────────
+// FIREBASE設定（あなた専用の鍵）
+// ──────────────────────────────────────────────
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBeYO4jT79o7WUAbuWSuNPDU1X084H7O-w",
+  authDomain: "hearme-40eb9.firebaseapp.com",
+  projectId: "hearme-40eb9",
+  storageBucket: "hearme-40eb9.firebasestorage.app",
+  messagingSenderId: "291597042418",
+  appId: "1:291597042418:web:c08c163c94ea1f77cec66b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ──────────────────────────────────────────────
+// アプリロジック
+// ──────────────────────────────────────────────
+
+// 画面遷移
+window.go = (id) => {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+    document.getElementById('p-' + id).classList.add('on');
+};
+
+// ユーザー名保存
+window.saveUserName = () => {
+    const name = document.getElementById('user-name-input').value;
+    if(!name) return alert('名前を入れてね');
+    localStorage.setItem('hm_user', name);
+    go('home');
+};
+
+// 投稿機能（クラウド保存）
+window.doPost = async () => {
+    const song = document.getElementById('song-in').value;
+    const artist = document.getElementById('artist-in').value;
+    const comment = document.getElementById('cmt-in').value;
+    const name = localStorage.getItem('hm_user');
+
+    if(!song || !artist) return alert('曲とアーティストを教えて！');
+
+    try {
+        await addDoc(collection(db, "posts"), {
+            song, artist, comment, name,
+            time: serverTimestamp()
+        });
+        localStorage.setItem('last_post_date', new Date().toDateString());
+        go('home');
+        // 入力クリア
+        document.getElementById('song-in').value = '';
+        document.getElementById('artist-in').value = '';
+        document.getElementById('cmt-in').value = '';
+    } catch (e) {
+        alert('エラーが発生しました。Firebaseの設定を確認してください。');
+    }
+};
+
+// リアルタイム読み込み（BeReal風制限付き）
+function listenPosts() {
+    const q = query(collection(db, "posts"), orderBy("time", "desc"));
+    const hasPostedToday = localStorage.getItem('last_post_date') === new Date().toDateString();
+
+    onSnapshot(q, (snapshot) => {
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
+        
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            const card = document.createElement('div');
+            card.className = 'card' + (hasPostedToday ? '' : ' blur');
+            
+            // 時間の表示変換
+            let timeStr = 'Just now';
+            if(data.time) {
+                const date = data.time.toDate();
+                timeStr = date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
+            }
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--tx2); margin-bottom:8px;">
+                    <span>${data.name || '匿名'}</span>
+                    <span>${timeStr}</span>
+                </div>
+                <div style="font-weight:600; font-size:18px;">${data.song}</div>
+                <div style="color:var(--accent); font-size:14px; margin-bottom:10px;">${data.artist}</div>
+                <div style="font-size:14px; line-height:1.4;">${data.comment || ''}</div>
+            `;
+            feed.appendChild(card);
+        });
+
+        if(!hasPostedToday) {
+            const msg = document.createElement('div');
+            msg.style.cssText = "text-align:center; padding:20px; color:var(--accent); font-weight:600;";
+            msg.innerHTML = "✨ 今日の曲を投稿して、友達の曲をチェックしよう！";
+            feed.prepend(msg);
+        }
+    });
+}
+
+// 起動時チェック
+if(localStorage.getItem('hm_user')) {
+    go('home');
+} else {
+    go('login');
+}
+listenPosts();
+</script>
+</body>
+</html>
