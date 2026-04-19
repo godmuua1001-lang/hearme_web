@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="hearme">
+<meta name="theme-color" content="#080809">
+<link rel="manifest" href="manifest.json">
+<title>hearme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ─── */
+:root{
+  --bg:#080809; --s1:#101113; --s2:#18191c; --s3:#202226; --s4:#28292e;
+  --ln:rgba(255,255,255,.055); --ln2:rgba(255,255,255,.10);
+  --tx:#edecea; --tx2:#83868f; --tx3:#44464d;
+  --cr:#e8e3d7; --cr2:#c5bfb2;
+  --bl:#5b8cff; --tl:#43cfc6; --rs:#ff6585; --am:#ffb240;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
+body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
+
+/* ─── SAFE AREAS ─── */
+:root{
+–sat:env(safe-area-inset-top,44px);
+–sab:env(safe-area-inset-bottom,20px);
+}
+
+/* ─── SCREENS ─── */
+.scr{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .2s ease;background:var(–bg);}
+.scr.on{opacity:1;pointer-events:all;}
+
+/* ─── STATUS BAR ─── */
+.sb{
+position:absolute;top:0;left:0;right:0;z-index:200;
+height:calc(var(–sat) + 24px);
+display:flex;align-items:flex-end;justify-content:space-between;
+padding:0 22px 5px;
+font-size:12px;font-weight:600;letter-spacing:.02em;
+}
+.sb-ico{display:flex;gap:5px;align-items:center;}
+
+/* ─── PAGE ─── */
+.pg{
+position:absolute;
+top:calc(var(–sat) + 24px);
+left:0;right:0;
+bottom:calc(var(–sab) + 58px);
+overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.pg::-webkit-scrollbar{display:none;}
+
+/* ─── BOTTOM NAV ─── */
+.bnav{
+position:absolute;bottom:0;left:0;right:0;
+background:var(–bg);border-top:1px solid var(–ln);
+display:flex;align-items:center;justify-content:space-around;
+padding-bottom:var(–sab);padding-top:8px;z-index:100;
+height:calc(var(–sab) + 58px);
+}
+.nb{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(–tx3);transition:color .18s;padding:3px 16px;font-family:‘DM Sans’,sans-serif;}
+.nb.on{color:var(–cr);}
+.nb svg{width:20px;height:20px;}
+.nb-lbl{font-size:9px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;}
+.post-fab{
+position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:3px 14px;
+}
+.fab-circle{
+width:42px;height:42px;background:var(–cr);border-radius:50%;
+display:flex;align-items:center;justify-content:center;
+position:absolute;top:-20px;
+box-shadow:0 2px 18px rgba(0,0,0,.55),0 0 0 3px var(–bg);
+transition:transform .15s;
+}
+.post-fab:active .fab-circle{transform:scale(.93);}
+.fab-lbl{font-size:9px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;color:var(–cr);margin-top:24px;}
+
+/* ─── COMMON ─── */
+.card{background:var(–s1);border:1px solid var(–ln);border-radius:16px;}
+.pill{display:inline-flex;align-items:center;gap:4px;background:var(–s3);border:1px solid var(–ln2);border-radius:20px;padding:4px 10px;font-size:11px;color:var(–tx2);}
+.chip-emo{font-size:10px;background:var(–s3);border:1px solid var(–ln);padding:3px 9px;border-radius:20px;color:var(–tx2);white-space:nowrap;}
+.btn-p{background:var(–cr);color:var(–bg);border:none;border-radius:13px;font-family:‘DM Sans’,sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:transform .12s,opacity .12s;}
+.btn-p:active{transform:scale(.96);}
+.btn-g{background:var(–s2);color:var(–tx);border:1px solid var(–ln2);border-radius:12px;font-family:‘DM Sans’,sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s;}
+.btn-g:active{background:var(–s3);}
+.syne{font-family:‘Syne’,sans-serif;}
+.lbl{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(–tx3);}
+.ava{border-radius:50%;background:var(–s3);border:1px solid var(–ln);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* ─── TOAST ─── */
+.toast{
+position:fixed;z-index:9999;
+bottom:calc(var(–sab) + 68px);left:16px;right:16px;
+background:var(–cr);color:var(–bg);
+border-radius:13px;padding:12px 18px;
+font-size:13px;font-weight:600;text-align:center;
+transform:translateY(14px);opacity:0;
+transition:transform .26s ease,opacity .26s ease;
+pointer-events:none;
+}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* ═══════════════════════════════
+SPLASH — cinematic reveal
+═══════════════════════════════ */
+#scr-splash{
+display:flex;flex-direction:column;
+align-items:center;justify-content:center;
+background:var(–bg);overflow:hidden;
+cursor:pointer;
+}
+/* noise texture overlay */
+#scr-splash::before{
+content:’’;position:absolute;inset:0;
+background-image:url(“data:image/svg+xml,%3Csvg viewBox=‘0 0 256 256’ xmlns=‘http://www.w3.org/2000/svg’%3E%3Cfilter id=‘n’%3E%3CfeTurbulence type=‘fractalNoise’ baseFrequency=‘0.9’ numOctaves=‘4’ stitchTiles=‘stitch’/%3E%3C/filter%3E%3Crect width=‘100%25’ height=‘100%25’ filter=‘url(%23n)’ opacity=‘0.03’/%3E%3C/svg%3E”);
+opacity:.4;pointer-events:none;
+}
+/* ambient glow */
+#scr-splash::after{
+content:’’;position:absolute;
+width:300px;height:300px;border-radius:50%;
+background:radial-gradient(circle,rgba(91,140,255,.07) 0%,transparent 70%);
+top:50%;left:50%;transform:translate(-50%,-60%);
+pointer-events:none;
+}
+.sp-content{
+position:relative;z-index:1;
+display:flex;flex-direction:column;align-items:center;gap:0;
+}
+/* Logo mark */
+.sp-mark{
+position:relative;width:96px;height:96px;
+display:flex;align-items:center;justify-content:center;
+margin-bottom:20px;
+}
+.sp-ring-a,.sp-ring-b,.sp-ring-c{
+position:absolute;border-radius:50%;border:1px solid;
+}
+.sp-ring-a{inset:-12px;border-color:rgba(232,227,215,.12);animation:ra 3.5s ease-out infinite;}
+.sp-ring-b{inset:-24px;border-color:rgba(232,227,215,.06);animation:ra 3.5s ease-out infinite .7s;}
+.sp-ring-c{inset:-38px;border-color:rgba(232,227,215,.03);animation:ra 3.5s ease-out infinite 1.4s;}
+@keyframes ra{0%{transform:scale(.82);opacity:.8}100%{transform:scale(1.25);opacity:0}}
+
+/* Wordmark */
+.sp-wordmark{
+font-family:‘Syne’,sans-serif;
+font-size:42px;font-weight:800;
+letter-spacing:-.05em;
+color:var(–cr);
+line-height:1;
+margin-bottom:10px;
+}
+/* Tagline with typed-look */
+.sp-tagline{
+font-size:11px;color:var(–tx3);
+letter-spacing:.18em;text-transform:uppercase;
+margin-bottom:28px;
+}
+/* Animated waveform */
+.sp-wave{display:flex;gap:4px;align-items:center;height:28px;}
+.sw{width:3px;border-radius:3px;background:var(–cr2);}
+.sw:nth-child(1){animation:sw1 1.15s ease-in-out infinite;}
+.sw:nth-child(2){animation:sw2 1.15s ease-in-out infinite .1s;}
+.sw:nth-child(3){animation:sw3 1.15s ease-in-out infinite .2s;}
+.sw:nth-child(4){animation:sw4 1.15s ease-in-out infinite .3s;}
+.sw:nth-child(5){animation:sw3 1.15s ease-in-out infinite .4s;}
+.sw:nth-child(6){animation:sw1 1.15s ease-in-out infinite .5s;}
+.sw:nth-child(7){animation:sw2 1.15s ease-in-out infinite .6s;}
+@keyframes sw1{0%,100%{height:4px}50%{height:18px}}
+@keyframes sw2{0%,100%{height:12px}50%{height:5px}}
+@keyframes sw3{0%,100%{height:20px}50%{height:7px}}
+@keyframes sw4{0%,100%{height:8px}50%{height:24px}}
+
+/* Bottom hint */
+.sp-hint{
+position:absolute;bottom:52px;
+display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.sp-hint-txt{font-size:11px;color:var(–tx3);letter-spacing:.12em;text-transform:uppercase;animation:bk 2.2s ease-in-out infinite;}
+@keyframes bk{0%,100%{opacity:.2}50%{opacity:.8}}
+.sp-hint-line{width:1px;height:24px;background:linear-gradient(to bottom,transparent,var(–tx3),transparent);animation:bk 2.2s ease-in-out infinite .3s;}
+
+/* version badge */
+.sp-ver{position:absolute;bottom:20px;right:20px;font-size:10px;color:var(–tx3);letter-spacing:.05em;}
+
+/* ═══════════════════════════════
+BEREAL OVERLAY
+═══════════════════════════════ */
+#bereal-ov{
+position:fixed;inset:0;z-index:5000;
+background:rgba(8,8,9,.88);
+backdrop-filter:blur(16px) saturate(1.5);
+display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+padding:28px 24px;
+}
+#bereal-ov.show{display:flex;}
+.br-icon{
+width:72px;height:72px;border-radius:50%;background:var(–cr);
+display:flex;align-items:center;justify-content:center;
+animation:brp 1.8s ease-in-out infinite;
+}
+@keyframes brp{0%,100%{box-shadow:0 0 0 0 rgba(232,227,215,.35)}60%{box-shadow:0 0 0 22px rgba(232,227,215,0)}}
+.br-ttl{font-family:‘Syne’,sans-serif;font-size:24px;font-weight:800;letter-spacing:-.03em;text-align:center;}
+.br-sub{font-size:13px;color:var(–tx2);text-align:center;line-height:1.65;max-width:260px;}
+.br-timer{font-family:‘Syne’,sans-serif;font-size:52px;font-weight:800;letter-spacing:-.04em;color:var(–rs);animation:tp 1s ease-in-out infinite;}
+@keyframes tp{0%,100%{opacity:1}50%{opacity:.45}}
+.br-btn{height:52px;width:100%;max-width:280px;border-radius:15px;font-size:15px;}
+.br-later{font-size:12px;color:var(–tx3);cursor:pointer;padding:8px 16px;margin-top:-4px;}
+
+/* ═══════════════════════════════
+HOME
+═══════════════════════════════ */
+.hm-hd{padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;}
+.hm-logo{display:flex;align-items:center;gap:8px;}
+.share-btn{margin:0 20px 16px;height:52px;width:calc(100% - 40px);border-radius:14px;font-size:14px;}
+/* notification banner */
+.notif-bar{
+margin:0 20px 14px;padding:12px 14px;
+background:linear-gradient(135deg,rgba(91,140,255,.09),rgba(67,207,198,.07));
+border:1px solid rgba(91,140,255,.18);border-radius:13px;
+display:flex;align-items:center;gap:10px;cursor:pointer;
+}
+.notif-bar-txt{flex:1;}
+.notif-bar-ttl{font-size:12px;font-weight:600;margin-bottom:1px;}
+.notif-bar-sub{font-size:10px;color:var(–tx2);}
+.notif-bar-btn{background:var(–bl);color:#fff;border:none;border-radius:8px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:‘DM Sans’,sans-serif;}
+/* hot banner */
+.hot{
+margin:0 20px 16px;padding:14px 15px;border-radius:16px;
+background:linear-gradient(135deg,#0e1119,#0a0d14);
+border:1px solid rgba(91,140,255,.15);position:relative;overflow:hidden;
+}
+.hot::after{content:’’;position:absolute;top:-24px;right:-24px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,rgba(91,140,255,.10) 0%,transparent 70%);}
+.hot-lbl{font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(–bl);margin-bottom:9px;}
+.hot-row{display:flex;align-items:center;gap:10px;padding:3px 0;}
+.hot-n{font-family:‘Syne’,sans-serif;font-size:15px;font-weight:800;color:var(–s4);width:20px;flex-shrink:0;}
+.hot-n.g{color:var(–am);}
+.hot-info{flex:1;}
+.hot-song{font-size:13px;font-weight:500;}
+.hot-art{font-size:10px;color:var(–tx2);}
+.hot-cnt{font-size:10px;color:var(–bl);}
+/* feed */
+.sec-hd{padding:0 20px 9px;display:flex;align-items:center;justify-content:space-between;}
+.feed-card{margin:0 20px 8px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .14s,transform .1s;}
+.feed-card:active{transform:scale(.984);background:var(–s2);}
+.fi{flex:1;min-width:0;}
+.fi-meta{font-size:10px;color:var(–tx3);margin-bottom:2px;}
+.fi-song{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fi-art{font-size:11px;color:var(–tx2);margin-top:1px;}
+.fi-r{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.fi-time{font-size:9px;color:var(–tx3);}
+/* live dot */
+.ld{width:6px;height:6px;border-radius:50%;background:var(–rs);display:inline-block;animation:ldbk 1.3s ease-in-out infinite;}
+@keyframes ldbk{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ═══════════════════════════════
+MATCH
+═══════════════════════════════ */
+.m-tabs{display:flex;gap:5px;padding:14px 20px 10px;}
+.mtb{flex:1;height:33px;border-radius:9px;background:var(–s2);border:1px solid var(–ln);font-family:‘DM Sans’,sans-serif;font-size:11px;font-weight:600;color:var(–tx2);cursor:pointer;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:4px;}
+.mtb.on{background:var(–cr);color:var(–bg);border-color:var(–cr);}
+/* song match */
+.sm-card{margin:0 20px 9px;padding:13px;cursor:pointer;transition:background .14s;}
+.sm-card:active{background:var(–s2);}
+.sm-top{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.sm-cov{width:48px;height:48px;border-radius:10px;background:var(–s3);overflow:hidden;flex-shrink:0;border:1px solid var(–ln);}
+.sm-cov img{width:100%;height:100%;object-fit:cover;}
+.sm-song{font-size:14px;font-weight:600;letter-spacing:-.01em;}
+.sm-art{font-size:11px;color:var(–tx2);margin-top:2px;}
+.sm-badge{font-family:‘Syne’,sans-serif;font-size:10px;font-weight:700;color:var(–bl);background:rgba(91,140,255,.09);border:1px solid rgba(91,140,255,.18);border-radius:20px;padding:2px 8px;align-self:flex-start;}
+.sm-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.up{display:flex;align-items:center;gap:5px;background:var(–s3);border:1px solid var(–ln);border-radius:20px;padding:4px 9px;}
+.up .ava{width:19px;height:19px;font-size:10px;}
+.up-nm{font-size:11px;color:var(–tx2);}
+/* feel match */
+.fm-hd{padding:6px 20px 8px;display:flex;align-items:center;gap:9px;}
+.fm-scroll{padding:0 20px 2px;display:flex;gap:7px;overflow-x:auto;}
+.fm-scroll::-webkit-scrollbar{display:none;}
+.fm-card{flex-shrink:0;width:130px;padding:12px;cursor:pointer;transition:background .14s;}
+.fm-card:active{background:var(–s2);}
+
+/* ═══════════════════════════════
+EVENTS
+═══════════════════════════════ */
+.ev-hero{
+margin:10px 20px 14px;border-radius:18px;overflow:hidden;position:relative;height:160px;
+background:linear-gradient(135deg,#0c1016,#101620,#080d12);
+border:1px solid rgba(67,207,198,.14);cursor:pointer;
+}
+.ev-hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 55%,rgba(67,207,198,.11) 0%,transparent 58%),radial-gradient(ellipse at 78% 18%,rgba(91,140,255,.09) 0%,transparent 50%);}
+.ev-hero-cnt{position:relative;padding:16px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;}
+.ev-badge{font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(–tl);background:rgba(67,207,198,.09);border:1px solid rgba(67,207,198,.22);border-radius:5px;padding:2px 7px;align-self:flex-start;margin-bottom:6px;}
+.ev-ttl{font-family:‘Syne’,sans-serif;font-size:17px;font-weight:700;letter-spacing:-.02em;margin-bottom:3px;}
+.ev-sub{font-size:11px;color:var(–tx2);}
+.ev-filter{display:flex;gap:5px;padding:0 20px 11px;overflow-x:auto;}
+.ev-filter::-webkit-scrollbar{display:none;}
+.ev-chip{flex-shrink:0;height:27px;padding:0 10px;border-radius:20px;background:var(–s2);border:1px solid var(–ln);font-size:11px;font-weight:600;color:var(–tx2);cursor:pointer;display:flex;align-items:center;transition:background .15s,color .15s;}
+.ev-chip.on{background:var(–cr);color:var(–bg);border-color:var(–cr);}
+.ev-card{margin:0 20px 8px;padding:12px 13px;display:flex;gap:11px;align-items:flex-start;cursor:pointer;transition:background .14s;}
+.ev-card:active{background:var(–s2);}
+.ev-dt{width:40px;flex-shrink:0;background:var(–s3);border:1px solid var(–ln);border-radius:10px;padding:5px 0;text-align:center;}
+.ev-dt-m{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(–tx3);}
+.ev-dt-d{font-family:‘Syne’,sans-serif;font-size:18px;font-weight:800;line-height:1;}
+.ev-name{font-size:13px;font-weight:600;margin-bottom:3px;}
+.ev-loc{font-size:10px;color:var(–tx2);}
+.ev-tags2{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+.ev-tg{font-size:9px;padding:2px 6px;border-radius:8px;border:1px solid var(–ln);color:var(–tx3);}
+.ev-join{margin-left:auto;flex-shrink:0;background:var(–s3);border:1px solid var(–ln2);border-radius:8px;padding:4px 10px;font-family:‘DM Sans’,sans-serif;font-size:11px;font-weight:600;color:var(–tx);cursor:pointer;transition:background .15s;}
+.ev-join.joined{background:var(–cr);color:var(–bg);border-color:var(–cr);}
+.ev-ppl{font-size:10px;color:var(–tx2);}
+
+/* ═══════════════════════════════
+HISTORY
+═══════════════════════════════ */
+.hs-hd{padding:16px 20px 12px;}
+.hs-stats{margin:0 20px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.st-card{padding:12px;border-radius:13px;background:var(–s1);border:1px solid var(–ln);}
+.st-v{font-family:‘Syne’,sans-serif;font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1;background:linear-gradient(135deg,var(–cr),var(–cr2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.st-l{font-size:10px;color:var(–tx3);margin-top:3px;}
+.mg{margin:0 20px 14px;padding:13px;border-radius:14px;background:var(–s1);border:1px solid var(–ln);}
+.mg-ttl{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(–tx3);margin-bottom:11px;}
+.mg-bars{display:flex;gap:5px;align-items:flex-end;height:46px;}
+.mg-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.mg-bar{width:100%;border-radius:3px 3px 0 0;}
+.mg-day{font-size:8px;color:var(–tx3);}
+.hs-card{margin:0 20px 7px;padding:11px 13px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .13s;}
+.hs-card:active{background:var(–s2);}
+.hs-th{width:42px;height:42px;border-radius:9px;background:var(–s3);border:1px solid var(–ln);display:flex;align-items:center;justify-content:center;font-size:17px;overflow:hidden;flex-shrink:0;}
+.hs-th img{width:100%;height:100%;object-fit:cover;}
+.hs-info{flex:1;min-width:0;}
+.hs-song{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hs-art{font-size:11px;color:var(–tx2);margin-top:1px;}
+.hs-r{text-align:right;flex-shrink:0;}
+.hs-em{font-size:17px;}
+.hs-t{font-size:9px;color:var(–tx3);margin-top:2px;}
+
+/* ═══════════════════════════════
+POST
+═══════════════════════════════ */
+.pt-hd{padding:12px 20px;display:flex;align-items:center;justify-content:space-between;}
+.pt-ttl{font-family:‘Syne’,sans-serif;font-size:16px;font-weight:800;letter-spacing:-.03em;}
+.pt-go{height:33px;padding:0 15px;border-radius:9px;font-size:12px;opacity:.38;transition:opacity .18s;}
+.pt-go.ok{opacity:1;}
+.pt-bereal{margin:0 20px 10px;padding:9px 12px;background:rgba(255,101,133,.07);border:1px solid rgba(255,101,133,.18);border-radius:11px;display:none;align-items:center;gap:7px;}
+.pt-bereal-txt{font-size:11px;color:var(–rs);font-weight:600;}
+.srch{margin:2px 20px 10px;background:var(–s2);border:1px solid var(–ln);border-radius:11px;display:flex;align-items:center;gap:6px;padding:0 12px;transition:border-color .18s;}
+.srch:focus-within{border-color:var(–ln2);}
+.srch-in{flex:1;background:none;border:none;outline:none;font-family:‘DM Sans’,sans-serif;font-size:13px;color:var(–tx);height:40px;}
+.srch-in::placeholder{color:var(–tx3);}
+.srch-btn{background:var(–cr);color:var(–bg);border:none;border-radius:7px;padding:4px 10px;font-family:‘DM Sans’,sans-serif;font-size:11px;font-weight:700;cursor:pointer;}
+.sel-prev{margin:0 20px 10px;padding:11px 13px;display:flex;align-items:center;gap:10px;border:1px solid rgba(67,207,198,.22);background:rgba(67,207,198,.04);border-radius:12px;}
+.sel-th{width:42px;height:42px;border-radius:9px;overflow:hidden;background:var(–s3);flex-shrink:0;}
+.sel-th img{width:100%;height:100%;object-fit:cover;}
+.res-item{padding:9px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(–ln);cursor:pointer;transition:background .12s;}
+.res-item:active{background:var(–s2);}
+.res-th{width:42px;height:42px;border-radius:8px;overflow:hidden;background:var(–s3);flex-shrink:0;}
+.res-th img{width:100%;height:100%;object-fit:cover;}
+.res-info{flex:1;min-width:0;}
+.res-ttl{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.res-ch{font-size:10px;color:var(–tx2);margin-top:1px;}
+.res-sel{width:23px;height:23px;border-radius:50%;border:1.5px solid var(–ln2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;}
+.res-sel.on{background:var(–tl);border-color:var(–tl);}
+.emo-sec{padding:12px 20px 8px;}
+.emo-ttl{font-size:11px;color:var(–tx3);margin-bottom:8px;font-weight:600;letter-spacing:.04em;}
+.emo-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.ec{background:var(–s2);border:1px solid var(–ln);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;transition:background .14s,border-color .14em;display:flex;align-items:center;gap:4px;}
+.ec.on{background:var(–s4);border-color:var(–ln2);color:var(–cr);}
+.cmt-box{margin:2px 20px 0;background:var(–s2);border:1px solid var(–ln);border-radius:11px;padding:11px 13px;transition:border-color .18s;}
+.cmt-box:focus-within{border-color:var(–ln2);}
+.cmt-ta{width:100%;background:none;border:none;outline:none;font-family:‘DM Sans’,sans-serif;font-size:13px;color:var(–tx);resize:none;line-height:1.6;height:58px;}
+.cmt-ta::placeholder{color:var(–tx3);}
+.cmt-cnt{text-align:right;font-size:9px;color:var(–tx3);margin-top:4px;}
+
+/* ═══════════════════════════════
+MATCH DETAIL MODAL
+═══════════════════════════════ */
+.md-bg{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55);display:none;}
+.md-bg.on{display:block;}
+.md-sheet{
+position:absolute;bottom:0;left:0;right:0;
+background:var(–s1);border-radius:22px 22px 0 0;
+border-top:1px solid var(–ln2);
+transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);
+max-height:88%;overflow-y:auto;
+padding-bottom:var(–sab);
+}
+.md-sheet::-webkit-scrollbar{display:none;}
+.md-bg.on .md-sheet{transform:translateY(0);}
+.md-pull{width:32px;height:4px;border-radius:2px;background:var(–s4);margin:10px auto 5px;}
+.md-pers{padding:10px 20px;display:flex;align-items:center;gap:11px;}
+.md-sc{margin:0 20px 11px;padding:12px;border-radius:13px;background:var(–s2);border:1px solid var(–ln);}
+.md-thumb{width:100%;aspect-ratio:16/10;border-radius:10px;background:var(–s3);overflow:hidden;margin-bottom:10px;display:flex;align-items:center;justify-content:center;}
+.md-thumb img{width:100%;height:100%;object-fit:cover;}
+.md-st{font-family:‘Syne’,sans-serif;font-size:15px;font-weight:700;letter-spacing:-.02em;}
+.md-sa{font-size:12px;color:var(–tx2);margin-top:2px;}
+.play-row{display:flex;gap:6px;margin-top:10px;}
+.play-main{flex:1;height:38px;border-radius:10px;font-size:13px;}
+.reacts{display:flex;gap:5px;padding:0 20px 11px;}
+.rb{flex:1;height:38px;border-radius:10px;background:var(–s3);border:1px solid var(–ln);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .18s,background .15s;}
+.rb:active{transform:scale(1.15);}
+.rb.on{background:var(–s4);border-color:var(–ln2);}
+.md-cmt-box{margin:0 20px 20px;padding:12px;border-radius:12px;background:var(–s2);border:1px solid var(–ln);}
+.md-cmt-l{font-size:9px;color:var(–tx3);letter-spacing:.09em;text-transform:uppercase;margin-bottom:4px;}
+.md-cmt-t{font-size:13px;color:var(–tx2);line-height:1.65;font-style:italic;}
+
+/* play bars */
+.pi{display:none;align-items:center;gap:2px;}
+.pi.v{display:flex;}
+.pb{width:3px;border-radius:2px;background:var(–bg);}
+.pb:nth-child(1){animation:eq1 .65s ease-in-out infinite alternate;}
+.pb:nth-child(2){animation:eq2 .65s ease-in-out infinite alternate .15s;}
+.pb:nth-child(3){animation:eq1 .65s ease-in-out infinite alternate .3s;}
+@keyframes eq1{to{height:3px}}
+@keyframes eq2{0%{height:13px}to{height:4px}}
+
+/* spinner */
+@keyframes sp{to{transform:rotate(360deg)}}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(–s4);border-top-color:var(–cr);animation:sp .7s linear infinite;display:none;}
+</style>
+
+</head>
+<body>
+
+<!-- ══ SPLASH ══ -->
+
+<div class="scr on" id="scr-splash" onclick="boot()">
+  <div class="sp-content">
+    <div class="sp-mark">
+      <div class="sp-ring-a"></div>
+      <div class="sp-ring-b"></div>
+      <div class="sp-ring-c"></div>
+      <svg width="72" height="72" viewBox="0 0 80 80" fill="none">
+        <ellipse cx="40" cy="38" rx="21" ry="27" stroke="#e8e3d7" stroke-width="1.7"/>
+        <path d="M19 38c-4.2 0-7.2-2.9-7.2-6.4s3-6.4 7.2-6.4" stroke="#e8e3d7" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+        <path d="M61 38c4.2 0 7.2-2.9 7.2-6.4s-3-6.4-7.2-6.4" stroke="#e8e3d7" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+        <line x1="30" y1="38" x2="30" y2="31" stroke="#e8e3d7" stroke-width="1.7" stroke-linecap="round"/>
+        <line x1="35.5" y1="38" x2="35.5" y2="26.5" stroke="#e8e3d7" stroke-width="1.7" stroke-linecap="round"/>
+        <line x1="41" y1="38" x2="41" y2="29" stroke="#e8e3d7" stroke-width="1.7" stroke-linecap="round"/>
+        <path d="M46 33.5c0-2.2 1.4-3.3 3.2-3.3s3.2 1.5 3.2 3.3-1.4 3.3-3.2 3.3H46l6.4 6.4" stroke="#e8e3d7" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="sp-wordmark">hearme</div>
+    <div class="sp-tagline">音楽で気持ちを届ける</div>
+    <div class="sp-wave">
+      <div class="sw" style="height:4px"></div>
+      <div class="sw" style="height:12px"></div>
+      <div class="sw" style="height:20px"></div>
+      <div class="sw" style="height:8px"></div>
+      <div class="sw" style="height:24px"></div>
+      <div class="sw" style="height:11px"></div>
+      <div class="sw" style="height:6px"></div>
+    </div>
+  </div>
+  <div class="sp-hint">
+    <div class="sp-hint-txt">タップして始める</div>
+    <div class="sp-hint-line"></div>
+  </div>
+  <div class="sp-ver">v1.0 beta</div>
+</div>
+
+<!-- ══ BEREAL ══ -->
+
+<div id="bereal-ov">
+  <div class="br-icon">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#080809" stroke-width="2.2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+  </div>
+  <div class="br-ttl">今の気持ちの曲は？</div>
+  <div class="br-sub">みんなに今の気分を音楽で届けよう<br>残り時間内にシェアしてね 🎵</div>
+  <div class="br-timer" id="br-t">03:00</div>
+  <button class="btn-p br-btn" onclick="openPostBereal()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    今すぐシェアする
+  </button>
+  <div class="br-later" onclick="skipBereal()">あとで（遅れた投稿として残ります）</div>
+</div>
+
+<!-- ══ HOME ══ -->
+
+<div class="scr" id="scr-home">
+  <div class="sb"><span>9:41</span><div class="sb-ico">
+    <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="4" width="2.5" height="6" rx=".6" opacity=".3"/><rect x="3.5" y="2.5" width="2.5" height="7.5" rx=".6" opacity=".55"/><rect x="7" y="1" width="2.5" height="9" rx=".6" opacity=".8"/><rect x="10.5" y="0" width="2.5" height="10" rx=".6"/></svg>
+    <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><path d="M7 1.8C9 1.8 10.8 2.6 12 4L13 2.9C11.5 1.3 9.4.4 7 .4S2.5 1.3 1 2.9L2 4C3.2 2.6 5 1.8 7 1.8Z" opacity=".4"/><path d="M7 4.2c1.2 0 2.3.5 3.1 1.3L11 4.6C9.9 3.5 8.5 2.8 7 2.8S4.1 3.5 3 4.6l.9.9C4.7 4.7 5.8 4.2 7 4.2Z" opacity=".7"/><circle cx="7" cy="8.5" r="1.4"/></svg>
+    <svg width="22" height="10" viewBox="0 0 22 10" fill="currentColor"><rect x=".5" y=".5" width="17" height="9" rx="2" stroke="currentColor" stroke-width="1" fill="none" opacity=".35"/><rect x="2" y="2" width="12" height="6" rx="1.2"/><path d="M19 3.2v3.6c.8-.3 1.3-1 1.3-1.8s-.5-1.5-1.3-1.8Z" opacity=".5"/></svg>
+  </div></div>
+  <div class="pg">
+    <div class="hm-hd">
+      <div class="hm-logo">
+        <svg width="18" height="18" viewBox="0 0 80 80" fill="none"><ellipse cx="40" cy="38" rx="21" ry="27" stroke="#e8e3d7" stroke-width="2.8"/><line x1="30" y1="38" x2="30" y2="31" stroke="#e8e3d7" stroke-width="2.8" stroke-linecap="round"/><line x1="36" y1="38" x2="36" y2="27" stroke="#e8e3d7" stroke-width="2.8" stroke-linecap="round"/><line x1="42" y1="38" x2="42" y2="29" stroke="#e8e3d7" stroke-width="2.8" stroke-linecap="round"/></svg>
+        <span class="syne" style="font-size:18px;font-weight:800;letter-spacing:-.04em;">hearme</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <div class="pill" style="font-size:10px;">📍 渋谷区</div>
+        <div class="pill" style="color:var(--rs);border-color:rgba(255,101,133,.2);gap:5px;font-size:10px;"><span class="ld"></span>LIVE</div>
+      </div>
+    </div>
+
+```
+<div class="notif-bar" id="notif-bar" onclick="reqNotif()">
+  <div style="font-size:22px;flex-shrink:0;">🔔</div>
+  <div class="notif-bar-txt">
+    <div class="notif-bar-ttl">ランダム通知をONに</div>
+    <div class="notif-bar-sub">BeReal方式で1日1回届く</div>
+  </div>
+  <button class="notif-bar-btn">許可する</button>
+</div>
+
+<button class="btn-p share-btn" onclick="go('post')">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+  今の気分の曲をシェア
+</button>
+
+<div class="hot">
+  <div class="hot-lbl">🔥 今みんなが聴いてる</div>
+  <div class="hot-row"><div class="hot-n g">1</div><div class="hot-info"><div class="hot-song">夜にかける</div><div class="hot-art">YOASOBI</div></div><div class="hot-cnt">247人</div></div>
+  <div class="hot-row"><div class="hot-n">2</div><div class="hot-info"><div class="hot-song">Pale Blue</div><div class="hot-art">米津玄師</div></div><div class="hot-cnt">183人</div></div>
+  <div class="hot-row"><div class="hot-n">3</div><div class="hot-info"><div class="hot-song">ドライフラワー</div><div class="hot-art">優里</div></div><div class="hot-cnt">142人</div></div>
+</div>
+
+<div class="sec-hd"><span class="lbl">今日のフィード</span><span style="font-size:10px;color:var(--tx3);">近くの人</span></div>
+<div class="card feed-card" onclick="openMD({a:'🎧',n:'23歳・女性',d:'2.1km',e:'😢 寂しい',s:'夜にかける',ar:'YOASOBI',c:'深夜に聴くと泣ける…',v:'x8VYWazR5mE',th:'https://img.youtube.com/vi/x8VYWazR5mE/mqdefault.jpg'})"><div class="ava" style="width:40px;height:40px;font-size:18px;">🎧</div><div class="fi"><div class="fi-meta">23歳・女性・2.1km</div><div class="fi-song">夜にかける</div><div class="fi-art">YOASOBI</div></div><div class="fi-r"><div class="chip-emo">😢 寂しい</div><div class="fi-time">6分前</div></div></div>
+<div class="card feed-card" onclick="openMD({a:'🌙',n:'19歳・非公開',d:'3.8km',e:'😌 穏やか',s:'Pale Blue',ar:'米津玄師',c:'雨の日にぴったり',v:'SX_ViT4Ra7k',th:'https://img.youtube.com/vi/SX_ViT4Ra7k/mqdefault.jpg'})"><div class="ava" style="width:40px;height:40px;font-size:18px;">🌙</div><div class="fi"><div class="fi-meta">19歳・非公開・3.8km</div><div class="fi-song">Pale Blue</div><div class="fi-art">米津玄師</div></div><div class="fi-r"><div class="chip-emo">😌 穏やか</div><div class="fi-time">14分前</div></div></div>
+<div class="card feed-card" onclick="openMD({a:'☀️',n:'28歳・男性',d:'5.2km',e:'😊 嬉しい',s:'Dynamite',ar:'BTS',c:'テンション上がる！',v:'gdZLi9oWNZg',th:'https://img.youtube.com/vi/gdZLi9oWNZg/mqdefault.jpg'})"><div class="ava" style="width:40px;height:40px;font-size:18px;">☀️</div><div class="fi"><div class="fi-meta">28歳・男性・5.2km</div><div class="fi-song">Dynamite</div><div class="fi-art">BTS</div></div><div class="fi-r"><div class="chip-emo">😊 嬉しい</div><div class="fi-time">1時間前</div></div></div>
+<div class="card feed-card"><div class="ava" style="width:40px;height:40px;font-size:18px;">🌧</div><div class="fi"><div class="fi-meta">21歳・女性・7km</div><div class="fi-song">ドライフラワー</div><div class="fi-art">優里</div></div><div class="fi-r"><div class="chip-emo">😭 悲しい</div><div class="fi-time">2時間前</div></div></div>
+<div style="height:10px;"></div>
+```
+
+  </div>
+  <div class="bnav">
+    <button class="nb on" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nb-lbl">ホーム</span></button>
+    <button class="nb" onclick="go('match')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span class="nb-lbl">マッチ</span></button>
+    <div class="post-fab" onclick="go('post')"><div class="fab-circle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080809" stroke-width="2.6"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><span class="fab-lbl">投稿</span></div>
+    <button class="nb" onclick="go('events')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="nb-lbl">イベント</span></button>
+    <button class="nb" onclick="go('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="nb-lbl">履歴</span></button>
+  </div>
+</div>
+
+<!-- ══ MATCH ══ -->
+
+<div class="scr" id="scr-match">
+  <div class="sb"><span>9:41</span></div>
+  <div class="pg">
+    <div style="padding:15px 20px 3px;display:flex;align-items:center;justify-content:space-between;">
+      <span class="syne" style="font-size:24px;font-weight:800;letter-spacing:-.03em;">マッチ</span>
+      <div class="pill" style="font-size:10px;">本日 2 / 3回</div>
+    </div>
+    <div style="padding:2px 20px 10px;font-size:11px;color:var(--tx3);">投稿がメイン。マッチはおまけ機能です 😊</div>
+    <div class="m-tabs">
+      <button class="mtb on" id="mt-s" onclick="mTab('s')">🎵 曲マッチ</button>
+      <button class="mtb" id="mt-f" onclick="mTab('f')">💭 気持ちマッチ</button>
+    </div>
+    <div id="mp-s">
+      <div class="lbl" style="padding:2px 20px 10px;">同じ曲を選んだ人</div>
+      <div class="card sm-card" onclick="openMD({a:'🎧',n:'23歳・女性',d:'2.1km',e:'😢 寂しい',s:'夜にかける',ar:'YOASOBI',c:'深夜に聴くと泣ける…',v:'x8VYWazR5mE',th:'https://img.youtube.com/vi/x8VYWazR5mE/mqdefault.jpg'})">
+        <div class="sm-top"><div class="sm-cov"><img src="https://img.youtube.com/vi/x8VYWazR5mE/mqdefault.jpg" onerror="this.style.display='none'" alt=""/></div><div style="flex:1;"><div class="sm-song">夜にかける</div><div class="sm-art">YOASOBI</div></div><div class="sm-badge">3人</div></div>
+        <div class="sm-pills"><div class="up"><div class="ava" style="width:19px;height:19px;font-size:9px;">🎧</div><div class="up-nm">23歳・女性</div><span style="font-size:11px;">😢</span></div><div class="up"><div class="ava" style="width:19px;height:19px;font-size:9px;">🌊</div><div class="up-nm">17歳・非公開</div><span style="font-size:11px;">😔</span></div></div>
+      </div>
+      <div class="card sm-card" onclick="openMD({a:'🌙',n:'19歳・非公開',d:'3.8km',e:'😌 穏やか',s:'Pale Blue',ar:'米津玄師',c:'雨の日にぴったり',v:'SX_ViT4Ra7k',th:'https://img.youtube.com/vi/SX_ViT4Ra7k/mqdefault.jpg'})">
+        <div class="sm-top"><div class="sm-cov"><img src="https://img.youtube.com/vi/SX_ViT4Ra7k/mqdefault.jpg" onerror="this.style.display='none'" alt=""/></div><div style="flex:1;"><div class="sm-song">Pale Blue</div><div class="sm-art">米津玄師</div></div><div class="sm-badge">2人</div></div>
+        <div class="sm-pills"><div class="up"><div class="ava" style="width:19px;height:19px;font-size:9px;">🌙</div><div class="up-nm">19歳・非公開</div><span style="font-size:11px;">😌</span></div><div class="up"><div class="ava" style="width:19px;height:19px;font-size:9px;">🌸</div><div class="up-nm">22歳・女性</div><span style="font-size:11px;">😶</span></div></div>
+      </div>
+    </div>
+    <div id="mp-f" style="display:none;">
+      <div class="lbl" style="padding:2px 20px 10px;">同じ気持ちの人</div>
+      <div class="fm-hd"><span style="font-size:20px;">😢</span><div><div class="syne" style="font-size:13px;font-weight:700;">寂しい・悲しい</div><div style="font-size:10px;color:var(--tx2);">近くに12人</div></div></div>
+      <div class="fm-scroll">
+        <div class="card fm-card" onclick="openMD({a:'🎧',n:'23歳・女性',d:'2.1km',e:'😢 寂しい',s:'夜にかける',ar:'YOASOBI',c:'深夜に聴くと泣ける…',v:'x8VYWazR5mE',th:'https://img.youtube.com/vi/x8VYWazR5mE/mqdefault.jpg'})"><div class="ava" style="width:40px;height:40px;font-size:18px;margin-bottom:8px;">🎧</div><div style="font-size:12px;font-weight:500;">23歳・女性</div><div style="font-size:10px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">夜にかける</div><div style="font-size:9px;color:var(--tx3);margin-top:3px;">2.1km先</div></div>
+        <div class="card fm-card" onclick="openMD({a:'🌊',n:'17歳・非公開',d:'4.5km',e:'😢 寂しい',s:'ドライフラワー',ar:'優里',c:'何度聴いても泣く',v:'',th:''})"><div class="ava" style="width:40px;height:40px;font-size:18px;margin-bottom:8px;">🌊</div><div style="font-size:12px;font-weight:500;">17歳・非公開</div><div style="font-size:10px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ドライフラワー</div><div style="font-size:9px;color:var(--tx3);margin-top:3px;">4.5km先</div></div>
+        <div class="card fm-card"><div class="ava" style="width:40px;height:40px;font-size:18px;margin-bottom:8px;">🍂</div><div style="font-size:12px;font-weight:500;">25歳・男性</div><div style="font-size:10px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">川の流れのように</div><div style="font-size:9px;color:var(--tx3);margin-top:3px;">6.1km先</div></div>
+      </div>
+      <div class="fm-hd" style="margin-top:10px;"><span style="font-size:20px;">🤩</span><div><div class="syne" style="font-size:13px;font-weight:700;">テンション高め</div><div style="font-size:10px;color:var(--tx2);">近くに5人</div></div></div>
+      <div class="fm-scroll">
+        <div class="card fm-card" onclick="openMD({a:'☀️',n:'28歳・男性',d:'5.2km',e:'😊 嬉しい',s:'Dynamite',ar:'BTS',c:'テンション上がる！',v:'gdZLi9oWNZg',th:'https://img.youtube.com/vi/gdZLi9oWNZg/mqdefault.jpg'})"><div class="ava" style="width:40px;height:40px;font-size:18px;margin-bottom:8px;">☀️</div><div style="font-size:12px;font-weight:500;">28歳・男性</div><div style="font-size:10px;color:var(--tx2);margin-top:2px;">Dynamite</div><div style="font-size:9px;color:var(--tx3);margin-top:3px;">5.2km先</div></div>
+        <div class="card fm-card"><div class="ava" style="width:40px;height:40px;font-size:18px;margin-bottom:8px;">🎪</div><div style="font-size:12px;font-weight:500;">16歳・非公開</div><div style="font-size:10px;color:var(--tx2);margin-top:2px;">IDOL</div><div style="font-size:9px;color:var(--tx3);margin-top:3px;">3.1km先</div></div>
+      </div>
+    </div>
+    <div style="height:10px;"></div>
+  </div>
+  <div class="bnav"><button class="nb" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nb-lbl">ホーム</span></button><button class="nb on" onclick="go('match')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span class="nb-lbl">マッチ</span></button><div class="post-fab" onclick="go('post')"><div class="fab-circle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080809" stroke-width="2.6"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><span class="fab-lbl">投稿</span></div><button class="nb" onclick="go('events')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="nb-lbl">イベント</span></button><button class="nb" onclick="go('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="nb-lbl">履歴</span></button></div>
+</div>
+
+<!-- ══ EVENTS ══ -->
+
+<div class="scr" id="scr-events">
+  <div class="sb"><span>9:41</span></div>
+  <div class="pg">
+    <div style="padding:15px 20px 8px;display:flex;align-items:center;justify-content:space-between;"><span class="syne" style="font-size:24px;font-weight:800;letter-spacing:-.03em;">イベント</span><button class="btn-g" style="height:28px;padding:0 10px;font-size:11px;border-radius:8px;" onclick="toast('イベント作成は近日公開')">＋ 作成</button></div>
+    <div class="ev-hero"><div class="ev-hero-bg"></div><div class="ev-hero-cnt"><div class="ev-badge">注目</div><div class="ev-ttl">深夜の孤独を音楽で繋ぐ夜</div><div class="ev-sub">4月25日 23:00〜 · オンライン · 無料</div></div></div>
+    <div class="ev-filter"><div class="ev-chip on" onclick="evChip(this)">すべて</div><div class="ev-chip" onclick="evChip(this)">オンライン</div><div class="ev-chip" onclick="evChip(this)">渋谷区</div><div class="ev-chip" onclick="evChip(this)">無料</div><div class="ev-chip" onclick="evChip(this)">今週</div></div>
+    <div class="lbl" style="padding:0 20px 8px;">開催予定</div>
+    <div class="card ev-card"><div class="ev-dt"><div class="ev-dt-m">APR</div><div class="ev-dt-d">22</div></div><div style="flex:1;"><div class="ev-name">J-POP 感情シェア会 vol.3</div><div class="ev-loc">📍 代官山 / 定員20名</div><div class="ev-tags2"><div class="ev-tg">J-POP</div><div class="ev-tg">オフライン</div><div class="ev-tg">¥500</div></div><div style="display:flex;align-items:center;margin-top:6px;"><span class="ev-ppl">12人参加</span><button class="ev-join" onclick="evJoin(this);event.stopPropagation()">参加する</button></div></div></div>
+    <div class="card ev-card"><div class="ev-dt"><div class="ev-dt-m">APR</div><div class="ev-dt-d">25</div></div><div style="flex:1;"><div class="ev-name">深夜の孤独を音楽で繋ぐ夜</div><div class="ev-loc">🌐 オンライン / Zoom</div><div class="ev-tags2"><div class="ev-tg">洋楽</div><div class="ev-tg">邦楽</div><div class="ev-tg">無料</div></div><div style="display:flex;align-items:center;margin-top:6px;"><span class="ev-ppl">37人参加</span><button class="ev-join joined" onclick="evJoin(this);event.stopPropagation()">参加済み ✓</button></div></div></div>
+    <div class="card ev-card"><div class="ev-dt"><div class="ev-dt-m">MAY</div><div class="ev-dt-d">03</div></div><div style="flex:1;"><div class="ev-name">失恋ソング縛りプレイリスト大会</div><div class="ev-loc">🌐 Discord</div><div class="ev-tags2"><div class="ev-tg">失恋</div><div class="ev-tg">縛り</div><div class="ev-tg">無料</div></div><div style="display:flex;align-items:center;margin-top:6px;"><span class="ev-ppl">8人参加</span><button class="ev-join" onclick="evJoin(this);event.stopPropagation()">参加する</button></div></div></div>
+    <div style="height:10px;"></div>
+  </div>
+  <div class="bnav"><button class="nb" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nb-lbl">ホーム</span></button><button class="nb" onclick="go('match')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span class="nb-lbl">マッチ</span></button><div class="post-fab" onclick="go('post')"><div class="fab-circle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080809" stroke-width="2.6"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><span class="fab-lbl">投稿</span></div><button class="nb on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="nb-lbl">イベント</span></button><button class="nb" onclick="go('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="nb-lbl">履歴</span></button></div>
+</div>
+
+<!-- ══ HISTORY ══ -->
+
+<div class="scr" id="scr-history">
+  <div class="sb"><span>9:41</span></div>
+  <div class="pg">
+    <div class="hs-hd"><span class="syne" style="font-size:24px;font-weight:800;letter-spacing:-.03em;">履歴</span><div style="font-size:10px;color:var(--tx3);margin-top:3px;">あなたの感情と音楽のログ</div></div>
+    <div class="hs-stats"><div class="st-card"><div class="st-v">23</div><div class="st-l">今月の投稿曲</div></div><div class="st-card"><div class="st-v">47</div><div class="st-l">マッチした人</div></div><div class="st-card"><div class="st-v">😌</div><div class="st-l">今週の多い気分</div></div><div class="st-card"><div class="st-v">8</div><div class="st-l">連続投稿日数</div></div></div>
+    <div class="mg"><div class="mg-ttl">今週の気分グラフ</div><div class="mg-bars"><div class="mg-col"><div class="mg-bar" style="height:55%;background:linear-gradient(to top,#ffb240,#ffd166);"></div><div class="mg-day">月</div></div><div class="mg-col"><div class="mg-bar" style="height:30%;background:linear-gradient(to top,#4466dd,#6b8cff);"></div><div class="mg-day">火</div></div><div class="mg-col"><div class="mg-bar" style="height:70%;background:linear-gradient(to top,#2aafa8,#43cfc6);"></div><div class="mg-day">水</div></div><div class="mg-col"><div class="mg-bar" style="height:45%;background:linear-gradient(to top,#7c4dff,#a78bfa);"></div><div class="mg-day">木</div></div><div class="mg-col"><div class="mg-bar" style="height:85%;background:linear-gradient(to top,#ffb240,#ffd166);"></div><div class="mg-day">金</div></div><div class="mg-col"><div class="mg-bar" style="height:60%;background:linear-gradient(to top,#2aafa8,#43cfc6);"></div><div class="mg-day">土</div></div><div class="mg-col"><div class="mg-bar" style="height:40%;background:linear-gradient(to top,#4466dd,#6b8cff);"></div><div class="mg-day">日</div></div></div></div>
+    <div class="lbl" style="padding:0 20px 8px;">今日</div>
+    <div class="card hs-card"><div class="hs-th"><img src="https://img.youtube.com/vi/x8VYWazR5mE/mqdefault.jpg" onerror="this.textContent='🎵'" alt=""/></div><div class="hs-info"><div class="hs-song">夜にかける</div><div class="hs-art">YOASOBI</div></div><div class="hs-r"><div class="hs-em">😢</div><div class="hs-t">14:32</div></div></div>
+    <div class="card hs-card"><div class="hs-th"><img src="https://img.youtube.com/vi/SX_ViT4Ra7k/mqdefault.jpg" onerror="this.textContent='🎶'" alt=""/></div><div class="hs-info"><div class="hs-song">Pale Blue</div><div class="hs-art">米津玄師</div></div><div class="hs-r"><div class="hs-em">😌</div><div class="hs-t">9:15</div></div></div>
+    <div class="lbl" style="padding:8px 20px 8px;">昨日</div>
+    <div class="card hs-card"><div class="hs-th">🎸</div><div class="hs-info"><div class="hs-song">ドライフラワー</div><div class="hs-art">優里</div></div><div class="hs-r"><div class="hs-em">😭</div><div class="hs-t">22:47</div></div></div>
+    <div class="card hs-card"><div class="hs-th"><img src="https://img.youtube.com/vi/gdZLi9oWNZg/mqdefault.jpg" onerror="this.textContent='🎵'" alt=""/></div><div class="hs-info"><div class="hs-song">Dynamite</div><div class="hs-art">BTS</div></div><div class="hs-r"><div class="hs-em">😊</div><div class="hs-t">12:03</div></div></div>
+    <div style="height:10px;"></div>
+  </div>
+  <div class="bnav"><button class="nb" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nb-lbl">ホーム</span></button><button class="nb" onclick="go('match')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span class="nb-lbl">マッチ</span></button><div class="post-fab" onclick="go('post')"><div class="fab-circle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080809" stroke-width="2.6"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><span class="fab-lbl">投稿</span></div><button class="nb" onclick="go('events')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="nb-lbl">イベント</span></button><button class="nb on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="nb-lbl">履歴</span></button></div>
+</div>
+
+<!-- ══ POST ══ -->
+
+<div class="scr" id="scr-post">
+  <div class="sb"><span>9:41</span></div>
+  <div style="position:absolute;top:calc(var(--sat) + 24px);left:0;right:0;bottom:calc(var(--sab) + 58px);overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div class="pt-hd">
+      <span style="font-size:12px;color:var(--tx2);cursor:pointer;" onclick="go('home')">キャンセル</span>
+      <span class="pt-ttl">曲をシェア</span>
+      <button class="btn-p pt-go" id="pt-go" onclick="doPost()">投稿</button>
+    </div>
+    <div class="pt-bereal" id="pt-br"><span class="ld"></span><span class="pt-bereal-txt">ランダム通知からの投稿</span></div>
+    <div class="srch">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="srch-in" id="srch-in" placeholder="曲名・アーティストで検索..." onkeydown="if(event.key==='Enter')doSearch()"/>
+      <button class="srch-btn" onclick="doSearch()">検索</button>
+    </div>
+    <div id="srch-load" style="display:none;justify-content:center;padding:14px;"><div class="spin" style="display:block;"></div></div>
+    <div id="sel-prev" class="sel-prev" style="display:none;border-radius:11px;"><div class="sel-th"><img id="sel-img" src="" alt=""/></div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;" id="sel-t"></div><div style="font-size:10px;color:var(--tx2);margin-top:1px;" id="sel-a"></div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#43cfc6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div id="srch-res"></div>
+    <div class="emo-sec">
+      <div class="emo-ttl">今の気分は？</div>
+      <div class="emo-grid">
+        <div class="ec" onclick="pickE(this)">😊 嬉しい</div>
+        <div class="ec" onclick="pickE(this)">😢 悲しい</div>
+        <div class="ec" onclick="pickE(this)">😌 穏やか</div>
+        <div class="ec" onclick="pickE(this)">🥺 寂しい</div>
+        <div class="ec" onclick="pickE(this)">😤 モヤモヤ</div>
+        <div class="ec" onclick="pickE(this)">🤩 テンション高め</div>
+        <div class="ec" onclick="pickE(this)">😴 眠い</div>
+        <div class="ec" onclick="pickE(this)">😶 無感情</div>
+      </div>
+    </div>
+    <div class="cmt-box">
+      <textarea class="cmt-ta" id="cmt-ta" placeholder="一言コメントを添える..." maxlength="60" oninput="updC()"></textarea>
+      <div class="cmt-cnt"><span id="cmt-c">0</span> / 60</div>
+    </div>
+    <div style="height:18px;"></div>
+  </div>
+  <div class="bnav"><button class="nb" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nb-lbl">ホーム</span></button><button class="nb" onclick="go('match')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span class="nb-lbl">マッチ</span></button><div class="post-fab on" onclick="go('post')"><div class="fab-circle" style="background:var(--cr);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080809" stroke-width="2.6"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><span class="fab-lbl">投稿</span></div><button class="nb" onclick="go('events')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="nb-lbl">イベント</span></button><button class="nb" onclick="go('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="nb-lbl">履歴</span></button></div>
+</div>
+
+<!-- ══ MATCH DETAIL MODAL ══ -->
+
+<div class="md-bg" id="md-bg" onclick="closeMD(event)">
+  <div class="md-sheet">
+    <div class="md-pull"></div>
+    <div class="md-pers">
+      <div class="ava" id="md-a" style="width:44px;height:44px;font-size:19px;">🎧</div>
+      <div style="flex:1;"><div style="font-size:14px;font-weight:600;" id="md-n">23歳・女性</div><div style="font-size:11px;color:var(--tx2);margin-top:2px;" id="md-e">😢 寂しい</div></div>
+      <div class="pill" style="font-size:10px;" id="md-d">2.1km</div>
+    </div>
+    <div class="md-sc">
+      <div class="md-thumb" id="md-th"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".25"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+      <div class="md-st" id="md-s">曲名</div>
+      <div class="md-sa" id="md-ar">アーティスト</div>
+      <div class="play-row">
+        <button class="btn-p play-main" onclick="mdPlay()">
+          <div class="pi" id="md-pi"><div class="pb" style="height:8px;"></div><div class="pb" style="height:13px;"></div><div class="pb" style="height:8px;"></div></div>
+          <svg id="md-ico" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span id="md-lbl">プレビューを再生</span>
+        </button>
+      </div>
+    </div>
+    <div class="reacts">
+      <button class="rb" onclick="doR(this,'❤️')">❤️</button>
+      <button class="rb" onclick="doR(this,'😢')">😢</button>
+      <button class="rb" onclick="doR(this,'👏')">👏</button>
+      <button class="rb" onclick="doR(this,'✨')">✨</button>
+      <button class="rb" onclick="doR(this,'🫂')">🫂</button>
+    </div>
+    <div class="md-cmt-box"><div class="md-cmt-l">一言メモ</div><div class="md-cmt-t" id="md-c">—</div></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+
+<div class="toast" id="toast-el"></div>
+
+<!-- ══ FIREBASE SDK ══ -->
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js';
+
+const cfg = {
+  apiKey: "AIzaSyBeYO4jT79o7WUAbuWSuNPDU1X084H7O-w",
+  authDomain: "hearme-40eb9.firebaseapp.com",
+  projectId: "hearme-40eb9",
+  storageBucket: "hearme-40eb9.firebasestorage.app",
+  messagingSenderId: "291597042418",
+  appId: "1:291597042418:web:c08c163c94ea1f77cec66b"
+};
+const VAPID = "BHqqX0U21xv_EKFZA5nMuDRiQ38mbBsW_gflkYCH_d2wmYW7OtNLxHxbXuWQS29EjXuRPzPcGFI1xCVaTZXb918";
+
+const app = initializeApp(cfg);
+const msg = getMessaging(app);
+
+window._getFCMToken = async () => {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const token = await getToken(msg, { vapidKey: VAPID, serviceWorkerRegistration: reg });
+    if (token) {
+      await fetch('/api/register-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, userId: localStorage.getItem('hm_uid') || 'anon' })
+      });
+      return token;
+    }
+  } catch(e) { console.warn('FCM token error:', e); }
+  return null;
+};
+
+onMessage(msg, () => { window.triggerBereal?.(); });
+</script>
+
+<script>
+// ── State ──
+let _song=null, _emo=null, _mdPlay=false, _mdVid='', _brInt=null, _brSec=180, _fromBr=false;
+const YTK = 'AIzaSyD_placeholder_replace_me';
+
+// ── Boot ──
+function boot() {
+  go('home');
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      navigator.serviceWorker.addEventListener('message', e => {
+        if (e.data?.type === 'BEREAL_TRIGGER') triggerBereal();
+      });
+    }).catch(() => {});
+  }
+  if ('Notification' in window && Notification.permission === 'granted') {
+    document.getElementById('notif-bar').style.display = 'none';
+  }
+  // Check URL param
+  if (location.search.includes('bereal=1')) triggerBereal();
+}
+
+// ── Navigation ──
+function go(id) {
+  document.querySelectorAll('.scr').forEach(s => s.classList.remove('on'));
+  document.getElementById('scr-' + id)?.classList.add('on');
+}
+
+// ── Match tabs ──
+function mTab(t) {
+  document.getElementById('mt-s').classList.toggle('on', t === 's');
+  document.getElementById('mt-f').classList.toggle('on', t === 'f');
+  document.getElementById('mp-s').style.display = t === 's' ? 'block' : 'none';
+  document.getElementById('mp-f').style.display = t === 'f' ? 'block' : 'none';
+}
+
+// ── Notification ──
+async function reqNotif() {
+  if (!('Notification' in window)) { toast('このブラウザは通知未対応です'); return; }
+  const p = await Notification.requestPermission();
+  if (p === 'granted') {
+    document.getElementById('notif-bar').style.display = 'none';
+    toast('🔔 通知をONにしました！');
+    const token = await window._getFCMToken?.();
+    if (token) console.log('FCM registered');
+  } else {
+    toast('設定から通知を許可してください');
+  }
+}
+
+// ── BeReal ──
+window.triggerBereal = function() {
+  _brSec = 180;
+  document.getElementById('bereal-ov').classList.add('show');
+  updBr();
+  _brInt = setInterval(() => {
+    _brSec--;
+    updBr();
+    if (_brSec <= 0) {
+      clearInterval(_brInt);
+      document.getElementById('bereal-ov').classList.remove('show');
+      toast('時間切れ…遅れた投稿として残ります');
+    }
+  }, 1000);
+  // Also push browser notification if in background
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { new Notification('hearme 🎵', { body: '今の気持ちの曲は？', icon: 'icons/icon-192.png', tag: 'hm' }); } catch(e){}
+  }
+};
+function updBr() {
+  const m = String(Math.floor(_brSec / 60)).padStart(2, '0');
+  const s = String(_brSec % 60).padStart(2, '0');
+  document.getElementById('br-t').textContent = `${m}:${s}`;
+}
+function openPostBereal() {
+  clearInterval(_brInt);
+  document.getElementById('bereal-ov').classList.remove('show');
+  _fromBr = true;
+  document.getElementById('pt-br').style.display = 'flex';
+  go('post');
+}
+function skipBereal() {
+  clearInterval(_brInt);
+  document.getElementById('bereal-ov').classList.remove('show');
+  toast('遅れた投稿として記録されます');
+}
+
+// Demo: trigger after 10s for testing
+setTimeout(() => {
+  if (document.getElementById('scr-home')?.classList.contains('on')) triggerBereal();
+}, 10000);
+
+// ── Match detail ──
+function openMD(d) {
+  document.getElementById('md-a').textContent = d.a;
+  document.getElementById('md-n').textContent = d.n;
+  document.getElementById('md-e').textContent = d.e;
+  document.getElementById('md-d').textContent = d.d;
+  document.getElementById('md-s').textContent = d.s;
+  document.getElementById('md-ar').textContent = d.ar;
+  document.getElementById('md-c').textContent = `「${d.c}」`;
+  _mdVid = d.v || '';
+  const th = document.getElementById('md-th');
+  th.innerHTML = d.th
+    ? `<img src="${d.th}" style="width:100%;height:100%;object-fit:cover;" onerror="this.remove()"/>`
+    : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".25"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+  _mdPlay = false;
+  document.getElementById('md-pi').classList.remove('v');
+  document.getElementById('md-ico').style.display = 'block';
+  document.getElementById('md-lbl').textContent = 'プレビューを再生';
+  document.querySelectorAll('.rb').forEach(b => b.classList.remove('on'));
+  document.getElementById('md-bg').classList.add('on');
+}
+function closeMD(e) {
+  if (e.target === document.getElementById('md-bg')) document.getElementById('md-bg').classList.remove('on');
+}
+function mdPlay() {
+  _mdPlay = !_mdPlay;
+  document.getElementById('md-pi').classList.toggle('v', _mdPlay);
+  document.getElementById('md-ico').style.display = _mdPlay ? 'none' : 'block';
+  document.getElementById('md-lbl').textContent = _mdPlay ? '再生中...' : 'プレビューを再生';
+  if (_mdPlay && _mdVid) window.open(`https://www.youtube.com/watch?v=${_mdVid}`, '_blank');
+}
+function doR(btn, emoji) {
+  document.querySelectorAll('.rb').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  toast(`${emoji} リアクションを送りました`);
+}
+
+// ── Events ──
+function evJoin(btn) {
+  const j = btn.classList.contains('joined');
+  btn.classList.toggle('joined', !j);
+  btn.textContent = j ? '参加する' : '参加済み ✓';
+  if (!j) toast('イベントに参加しました 🎉');
+}
+function evChip(c) {
+  document.querySelectorAll('.ev-chip').forEach(x => x.classList.remove('on'));
+  c.classList.add('on');
+}
+
+// ── Post / YouTube search ──
+async function doSearch() {
+  const q = document.getElementById('srch-in').value.trim();
+  if (!q) return;
+  document.getElementById('srch-load').style.display = 'flex';
+  document.getElementById('srch-res').innerHTML = '';
+  try {
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q + ' 音楽 official')}&type=video&videoCategoryId=10&maxResults=5&key=${YTK}`);
+    const d = await r.json();
+    document.getElementById('srch-load').style.display = 'none';
+    if (d.error || !d.items?.length) { dummy(q); return; }
+    d.items.forEach(i => addR(i.id.videoId, i.snippet.title, i.snippet.channelTitle, i.snippet.thumbnails.medium?.url));
+  } catch { document.getElementById('srch-load').style.display = 'none'; dummy(q); }
+}
+function dummy(q) {
+  [['x8VYWazR5mE', `${q} - Official MV`, 'Music Channel'], ['SX_ViT4Ra7k', `${q} (Live)`, 'Artist Official'], ['gdZLi9oWNZg', `${q} - Lyric Video`, 'Vevo']].forEach(([v, t, c]) => addR(v, t, c, `https://img.youtube.com/vi/${v}/mqdefault.jpg`));
+}
+function addR(vid, title, ch, thumb) {
+  const d = document.createElement('div');
+  d.className = 'res-item';
+  d.innerHTML = `<div class="res-th"><img src="${thumb||''}" onerror="this.style.display='none'" alt=""/></div><div class="res-info"><div class="res-ttl">${esc(title)}</div><div class="res-ch">${esc(ch)}</div></div><div class="res-sel" id="rs${vid}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+  d.onclick = () => pickS(vid, title, ch, thumb);
+  document.getElementById('srch-res').appendChild(d);
+}
+function pickS(vid, title, ch, thumb) {
+  _song = { vid, title, ch, thumb };
+  document.getElementById('sel-img').src = thumb || '';
+  document.getElementById('sel-t').textContent = title;
+  document.getElementById('sel-a').textContent = ch;
+  document.getElementById('sel-prev').style.display = 'flex';
+  document.querySelectorAll('.res-sel').forEach(e => e.classList.remove('on'));
+  document.getElementById('rs' + vid)?.classList.add('on');
+  updPt();
+}
+function pickE(c) {
+  document.querySelectorAll('.ec').forEach(x => x.classList.remove('on'));
+  c.classList.add('on');
+  _emo = c.textContent;
+  updPt();
+}
+function updPt() { document.getElementById('pt-go').classList.toggle('ok', !!(_song && _emo)); }
+function updC() { document.getElementById('cmt-c').textContent = document.getElementById('cmt-ta').value.length; }
+function doPost() {
+  if (!_song || !_emo) { toast('曲と気分を選んでください'); return; }
+  const posts = JSON.parse(localStorage.getItem('hm_posts') || '[]');
+  posts.unshift({ song: _song.title, artist: _song.ch, vid: _song.vid, thumb: _song.thumb, emo: _emo, comment: document.getElementById('cmt-ta').value, time: new Date().toISOString(), fromBr: _fromBr });
+  localStorage.setItem('hm_posts', JSON.stringify(posts.slice(0, 50)));
+  go('home');
+  toast(_fromBr ? '投稿しました！みんなに届けました 🎵🔴' : '投稿しました 🎵');
+  _song = null; _emo = null; _fromBr = false;
+  document.getElementById('srch-in').value = '';
+  document.getElementById('srch-res').innerHTML = '';
+  document.getElementById('sel-prev').style.display = 'none';
+  document.getElementById('cmt-ta').value = '';
+  document.getElementById('cmt-c').textContent = '0';
+  document.querySelectorAll('.ec').forEach(c => c.classList.remove('on'));
+  document.getElementById('pt-go').classList.remove('ok');
+  document.getElementById('pt-br').style.display = 'none';
+}
+
+// ── Toast ──
+let _tt = null;
+function toast(msg) {
+  const t = document.getElementById('toast-el');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+
+</body>
+</html>
