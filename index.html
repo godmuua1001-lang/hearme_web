@@ -23,16 +23,13 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
 body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
-
 .scr{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .2s ease;background:var(--bg);}
 .scr.on{opacity:1;pointer-events:all;}
-
-.sb{position:absolute;top:0;left:0;right:0;z-index:200;height:calc(var(--sat) + 24px);display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 5px;font-size:12px;font-weight:600;letter-spacing:.02em;}
-.pg{position:absolute;top:calc(var(--sat) + 24px);left:0;right:0;bottom:calc(var(--sab) + 58px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.sb{position:absolute;top:0;left:0;right:0;z-index:200;height:calc(var(--sat)+24px);display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 5px;font-size:12px;font-weight:600;}
+.pg{position:absolute;top:calc(var(--sat)+24px);left:0;right:0;bottom:calc(var(--sab)+58px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .pg::-webkit-scrollbar{display:none;}
-
-.bnav{position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--ln);display:flex;align-items:center;justify-content:space-around;padding-bottom:var(--sab);padding-top:8px;z-index:100;height:calc(var(--sab) + 58px);}
-.nb{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--tx3);transition:color .18s;padding:3px 16px;font-family:'DM Sans',sans-serif;}
+.bnav{position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--ln);display:flex;align-items:center;justify-content:space-around;padding-bottom:var(--sab);padding-top:8px;z-index:100;height:calc(var(--sab)+58px);}
+.nb{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--tx3);transition:color .18s;padding:3px 14px;font-family:'DM Sans',sans-serif;}
 .nb.on{color:var(--cr);}
 .nb svg{width:20px;height:20px;}
 .nb-lbl{font-size:9px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;}
@@ -40,7 +37,6 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .fab-circle{width:42px;height:42px;background:var(--cr);border-radius:50%;display:flex;align-items:center;justify-content:center;position:absolute;top:-20px;box-shadow:0 2px 18px rgba(0,0,0,.55),0 0 0 3px var(--bg);transition:transform .15s;}
 .post-fab:active .fab-circle{transform:scale(.93);}
 .fab-lbl{font-size:9px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;color:var(--cr);margin-top:24px;}
-
 .card{background:var(--s1);border:1px solid var(--ln);border-radius:16px;}
 .pill{display:inline-flex;align-items:center;gap:4px;background:var(--s3);border:1px solid var(--ln2);border-radius:20px;padding:4px 10px;font-size:11px;color:var(--tx2);}
 .chip-emo{font-size:10px;background:var(--s3);border:1px solid var(--ln);padding:3px 9px;border-radius:20px;color:var(--tx2);white-space:nowrap;}
@@ -50,16 +46,16 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .btn-g:active{background:var(--s3);}
 .syne{font-family:'Syne',sans-serif;}
 .lbl{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);}
-.ava{border-radius:50%;background:var(--s3);border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-
-.toast{position:fixed;z-index:9999;bottom:calc(var(--sab) + 68px);left:16px;right:16px;background:var(--cr);color:var(--bg);border-radius:13px;padding:12px 18px;font-size:13px;font-weight:600;text-align:center;transform:translateY(14px);opacity:0;transition:transform .26s ease,opacity .26s ease;pointer-events:none;}
+.ava{border-radius:50%;background:var(--s3);border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
+.ava img{width:100%;height:100%;object-fit:cover;}
+.toast{position:fixed;z-index:9999;bottom:calc(var(--sab)+68px);left:16px;right:16px;background:var(--cr);color:var(--bg);border-radius:13px;padding:12px 18px;font-size:13px;font-weight:600;text-align:center;transform:translateY(14px);opacity:0;transition:transform .26s ease,opacity .26s ease;pointer-events:none;}
 .toast.show{transform:translateY(0);opacity:1;}
 
-/* ─── SPLASH ─── */
+/* SPLASH */
 #scr-splash{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);overflow:hidden;cursor:pointer;}
 #scr-splash::before{content:'';position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");opacity:.4;pointer-events:none;}
 #scr-splash::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(91,140,255,.07) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-60%);pointer-events:none;}
-.sp-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:0;}
+.sp-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;}
 .sp-mark{position:relative;width:96px;height:96px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
 .sp-ring-a,.sp-ring-b,.sp-ring-c{position:absolute;border-radius:50%;border:1px solid;}
 .sp-ring-a{inset:-12px;border-color:rgba(232,227,215,.12);animation:ra 3.5s ease-out infinite;}
@@ -87,27 +83,34 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 @keyframes bk{0%,100%{opacity:.2}50%{opacity:.8}}
 .sp-ver{position:absolute;bottom:20px;right:20px;font-size:10px;color:var(--tx3);}
 
-/* ─── ONBOARDING ─── */
+/* ONBOARDING */
 #scr-onboard{display:flex;flex-direction:column;background:var(--bg);overflow:hidden;}
-.ob-inner{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(var(--sat) + 40px) 28px 40px;overflow-y:auto;}
+.ob-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:calc(var(--sat)+40px) 28px 40px;overflow-y:auto;}
 .ob-inner::-webkit-scrollbar{display:none;}
 .ob-logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.04em;color:var(--cr);margin-bottom:32px;}
 .ob-step{width:100%;max-width:360px;}
 .ob-ttl{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:-.04em;margin-bottom:6px;line-height:1.15;}
 .ob-sub{font-size:13px;color:var(--tx2);margin-bottom:28px;line-height:1.6;}
-.ob-ava-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
-.ava-opt{width:52px;height:52px;border-radius:50%;background:var(--s2);border:2px solid var(--ln);font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,transform .12s;}
-.ava-opt.on{border-color:var(--cr);transform:scale(1.08);}
 .ob-inp{width:100%;background:var(--s2);border:1px solid var(--ln2);border-radius:13px;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--tx);outline:none;transition:border-color .18s;margin-bottom:10px;}
 .ob-inp:focus{border-color:var(--cr2);}
 .ob-inp::placeholder{color:var(--tx3);}
 .ob-btn{width:100%;height:52px;border-radius:15px;font-size:15px;margin-top:12px;}
-.ob-skip{font-size:12px;color:var(--tx3);text-align:center;margin-top:14px;cursor:pointer;}
+.ob-skip{font-size:12px;color:var(--tx3);text-align:center;margin-top:14px;cursor:pointer;padding:8px;}
 .ob-prog{display:flex;gap:6px;margin-bottom:28px;}
 .ob-dot{height:3px;border-radius:2px;background:var(--s3);flex:1;transition:background .2s;}
 .ob-dot.on{background:var(--cr);}
 
-/* ─── INVITE ─── */
+/* PHOTO AVATAR PICKER */
+.ava-upload-area{width:90px;height:90px;border-radius:50%;background:var(--s2);border:2px dashed var(--ln2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color .18s;position:relative;margin:0 auto 20px;}
+.ava-upload-area:active{border-color:var(--cr);}
+.ava-upload-area img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.ava-upload-area .ava-placeholder{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.ava-upload-area .ava-placeholder span{font-size:10px;color:var(--tx3);}
+.ava-emoji-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.ava-opt{width:44px;height:44px;border-radius:50%;background:var(--s2);border:2px solid var(--ln);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,transform .12s;}
+.ava-opt.on{border-color:var(--cr);transform:scale(1.08);}
+
+/* INVITE / FRIEND */
 .inv-box{background:var(--s1);border:1px solid var(--ln);border-radius:18px;padding:20px;width:100%;max-width:360px;margin-bottom:16px;}
 .inv-code{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;letter-spacing:.12em;color:var(--cr);text-align:center;margin:12px 0;}
 .inv-share-row{display:flex;gap:8px;}
@@ -115,18 +118,16 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .inv-enter{width:100%;display:flex;gap:8px;margin-top:8px;}
 .inv-enter input{flex:1;background:var(--s2);border:1px solid var(--ln2);border-radius:11px;padding:0 14px;font-family:'Syne',sans-serif;font-size:18px;letter-spacing:.12em;color:var(--tx);outline:none;height:48px;text-transform:uppercase;}
 .inv-enter input::placeholder{font-family:'DM Sans',sans-serif;font-size:13px;letter-spacing:0;text-transform:none;color:var(--tx3);}
-.inv-enter button{height:48px;padding:0 18px;border-radius:11px;font-size:13px;}
-.friends-list{width:100%;max-width:360px;}
+.friends-list{width:100%;}
 .friend-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--ln);}
 .friend-row:last-child{border:none;}
 .fr-info{flex:1;}
 .fr-name{font-size:14px;font-weight:600;}
 .fr-song{font-size:11px;color:var(--tx2);margin-top:2px;}
-.fr-time{font-size:10px;color:var(--tx3);}
 .fr-locked{font-size:11px;color:var(--tx3);font-style:italic;}
 
-/* ─── BEREAL OVERLAY ─── */
-#bereal-ov{position:fixed;inset:0;z-index:5000;background:rgba(8,8,9,.88);backdrop-filter:blur(16px) saturate(1.5);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px 24px;}
+/* BEREAL */
+#bereal-ov{position:fixed;inset:0;z-index:5000;background:rgba(8,8,9,.9);backdrop-filter:blur(20px);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px 24px;}
 #bereal-ov.show{display:flex;}
 .br-icon{width:72px;height:72px;border-radius:50%;background:var(--cr);display:flex;align-items:center;justify-content:center;animation:brp 1.8s ease-in-out infinite;}
 @keyframes brp{0%,100%{box-shadow:0 0 0 0 rgba(232,227,215,.35)}60%{box-shadow:0 0 0 22px rgba(232,227,215,0)}}
@@ -137,7 +138,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .br-btn{height:52px;width:100%;max-width:280px;border-radius:15px;font-size:15px;}
 .br-later{font-size:12px;color:var(--tx3);cursor:pointer;padding:8px 16px;margin-top:-4px;}
 
-/* ─── HOME ─── */
+/* HOME */
 .hm-hd{padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;}
 .hm-logo{display:flex;align-items:center;gap:8px;}
 .share-btn{margin:0 20px 16px;height:52px;width:calc(100% - 40px);border-radius:14px;font-size:14px;}
@@ -145,15 +146,11 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .notif-bar-ttl{font-size:12px;font-weight:600;margin-bottom:1px;}
 .notif-bar-sub{font-size:10px;color:var(--tx2);}
 .notif-bar-btn{background:var(--bl);color:#fff;border:none;border-radius:8px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'DM Sans',sans-serif;}
-
-/* lock wall */
 .lock-wall{margin:12px 20px;padding:28px 20px;border-radius:18px;background:var(--s1);border:1px solid var(--ln);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;}
 .lock-icon{font-size:36px;}
 .lock-ttl{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.03em;}
 .lock-sub{font-size:12px;color:var(--tx2);line-height:1.65;max-width:240px;}
 .lock-btn{height:44px;padding:0 22px;border-radius:12px;font-size:13px;margin-top:4px;}
-
-/* feed */
 .sec-hd{padding:0 20px 9px;display:flex;align-items:center;justify-content:space-between;}
 .feed-card{margin:0 20px 8px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .14s,transform .1s;}
 .feed-card:active{transform:scale(.984);background:var(--s2);}
@@ -166,19 +163,13 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .ld{width:6px;height:6px;border-radius:50%;background:var(--rs);display:inline-block;animation:ldbk 1.3s ease-in-out infinite;}
 @keyframes ldbk{0%,100%{opacity:1}50%{opacity:.25}}
 
-/* hot */
-.hot{margin:0 20px 16px;padding:14px 15px;border-radius:16px;background:linear-gradient(135deg,#0e1119,#0a0d14);border:1px solid rgba(91,140,255,.15);position:relative;overflow:hidden;}
-.hot::after{content:'';position:absolute;top:-24px;right:-24px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,rgba(91,140,255,.10) 0%,transparent 70%);}
-.hot-lbl{font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--bl);margin-bottom:9px;}
-.hot-row{display:flex;align-items:center;gap:10px;padding:3px 0;}
-.hot-n{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--s4);width:20px;flex-shrink:0;}
-.hot-n.g{color:var(--am);}
-.hot-info{flex:1;}
-.hot-song{font-size:13px;font-weight:500;}
-.hot-art{font-size:10px;color:var(--tx2);}
-.hot-cnt{font-size:10px;color:var(--bl);}
+/* MOOD STREAK banner */
+.streak-bar{margin:0 20px 14px;padding:12px 15px;border-radius:14px;background:linear-gradient(135deg,rgba(255,178,64,.07),rgba(255,101,133,.05));border:1px solid rgba(255,178,64,.2);display:flex;align-items:center;gap:10px;}
+.streak-num{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--am);}
+.streak-lbl{font-size:12px;font-weight:600;color:var(--tx);}
+.streak-sub{font-size:10px;color:var(--tx2);margin-top:1px;}
 
-/* ─── MATCH ─── */
+/* MATCH */
 .m-tabs{display:flex;gap:5px;padding:14px 20px 10px;}
 .mtb{flex:1;height:33px;border-radius:9px;background:var(--s2);border:1px solid var(--ln);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:var(--tx2);cursor:pointer;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:4px;}
 .mtb.on{background:var(--cr);color:var(--bg);border-color:var(--cr);}
@@ -197,10 +188,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .fm-hd{padding:6px 20px 8px;display:flex;align-items:center;gap:9px;}
 .fm-scroll{padding:0 20px 2px;display:flex;gap:7px;overflow-x:auto;}
 .fm-scroll::-webkit-scrollbar{display:none;}
-.fm-card{flex-shrink:0;width:130px;padding:12px;cursor:pointer;transition:background .14s;}
+.fm-card{flex-shrink:0;width:120px;padding:12px;cursor:pointer;transition:background .14s;}
 .fm-card:active{background:var(--s2);}
 
-/* ─── EVENTS ─── */
+/* EVENTS */
 .ev-hero{margin:10px 20px 14px;border-radius:18px;overflow:hidden;position:relative;height:160px;background:linear-gradient(135deg,#0c1016,#101620,#080d12);border:1px solid rgba(67,207,198,.14);cursor:pointer;}
 .ev-hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 55%,rgba(67,207,198,.11) 0%,transparent 58%),radial-gradient(ellipse at 78% 18%,rgba(91,140,255,.09) 0%,transparent 50%);}
 .ev-hero-cnt{position:relative;padding:16px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;}
@@ -224,18 +215,18 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .ev-join.joined{background:var(--cr);color:var(--bg);border-color:var(--cr);}
 .ev-ppl{font-size:10px;color:var(--tx2);}
 
-/* ─── HISTORY ─── */
-.hs-hd{padding:16px 20px 12px;}
-.hs-stats{margin:0 20px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+/* HISTORY / PROFILE */
+.hs-stats{margin:0 20px 14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .st-card{padding:12px;border-radius:13px;background:var(--s1);border:1px solid var(--ln);}
 .st-v{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1;background:linear-gradient(135deg,var(--cr),var(--cr2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 .st-l{font-size:10px;color:var(--tx3);margin-top:3px;}
 .mg{margin:0 20px 14px;padding:13px;border-radius:14px;background:var(--s1);border:1px solid var(--ln);}
 .mg-ttl{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);margin-bottom:11px;}
-.mg-bars{display:flex;gap:5px;align-items:flex-end;height:46px;}
+.mg-bars{display:flex;gap:5px;align-items:flex-end;height:52px;}
 .mg-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
-.mg-bar{width:100%;border-radius:3px 3px 0 0;}
+.mg-bar{width:100%;border-radius:3px 3px 0 0;min-height:3px;}
 .mg-day{font-size:8px;color:var(--tx3);}
+.mg-emo{font-size:10px;margin-bottom:2px;}
 .hs-card{margin:0 20px 7px;padding:11px 13px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .13s;}
 .hs-card:active{background:var(--s2);}
 .hs-th{width:42px;height:42px;border-radius:9px;background:var(--s3);border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;font-size:17px;overflow:hidden;flex-shrink:0;}
@@ -247,18 +238,36 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .hs-em{font-size:17px;}
 .hs-t{font-size:9px;color:var(--tx3);margin-top:2px;}
 
-/* ─── POST ─── */
+/* PROFILE */
+.prof-card{margin:0 20px 16px;padding:20px;border-radius:18px;background:var(--s1);border:1px solid var(--ln);display:flex;align-items:center;gap:14px;}
+.prof-ava{width:64px;height:64px;font-size:28px;cursor:pointer;}
+.prof-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.03em;}
+.prof-bio{font-size:12px;color:var(--tx2);margin-top:3px;line-height:1.5;}
+.prof-code{font-family:'Syne',sans-serif;font-size:11px;color:var(--bl);letter-spacing:.1em;margin-top:4px;}
+.prof-sec{margin:0 20px 10px;}
+.prof-sec-ttl{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);margin-bottom:8px;}
+.prof-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--ln);}
+.prof-row:last-child{border:none;}
+
+/* POST */
 .pt-hd{padding:12px 20px;display:flex;align-items:center;justify-content:space-between;}
 .pt-ttl{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:-.03em;}
 .pt-go{height:33px;padding:0 15px;border-radius:9px;font-size:12px;opacity:.38;transition:opacity .18s;}
 .pt-go.ok{opacity:1;}
 .pt-bereal{margin:0 20px 10px;padding:9px 12px;background:rgba(255,101,133,.07);border:1px solid rgba(255,101,133,.18);border-radius:11px;display:none;align-items:center;gap:7px;}
 .pt-bereal-txt{font-size:11px;color:var(--rs);font-weight:600;}
-.srch{margin:2px 20px 10px;background:var(--s2);border:1px solid var(--ln);border-radius:11px;display:flex;align-items:center;gap:6px;padding:0 12px;transition:border-color .18s;}
+.srch{margin:2px 20px 6px;background:var(--s2);border:1px solid var(--ln);border-radius:11px;display:flex;align-items:center;gap:6px;padding:0 12px;transition:border-color .18s;}
 .srch:focus-within{border-color:var(--ln2);}
 .srch-in{flex:1;background:none;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--tx);height:40px;}
 .srch-in::placeholder{color:var(--tx3);}
-.srch-btn{background:var(--cr);color:var(--bg);border:none;border-radius:7px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;}
+.srch-btn{background:var(--cr);color:var(--bg);border:none;border-radius:7px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+
+/* YouTube URL paste area */
+.yt-paste{margin:0 20px 10px;padding:11px 13px;background:rgba(255,0,0,.04);border:1px solid rgba(255,80,80,.15);border-radius:11px;display:flex;align-items:center;gap:8px;}
+.yt-paste-in{flex:1;background:none;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--tx);placeholder:color:var(--tx3);}
+.yt-paste-in::placeholder{color:var(--tx3);}
+.yt-paste-btn{background:rgba(255,80,80,.15);color:#ff5050;border:none;border-radius:7px;padding:4px 10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+
 .sel-prev{margin:0 20px 10px;padding:11px 13px;display:flex;align-items:center;gap:10px;border:1px solid rgba(67,207,198,.22);background:rgba(67,207,198,.04);border-radius:12px;}
 .sel-th{width:42px;height:42px;border-radius:9px;overflow:hidden;background:var(--s3);flex-shrink:0;}
 .sel-th img{width:100%;height:100%;object-fit:cover;}
@@ -274,7 +283,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .emo-sec{padding:12px 20px 8px;}
 .emo-ttl{font-size:11px;color:var(--tx3);margin-bottom:8px;font-weight:600;letter-spacing:.04em;}
 .emo-grid{display:flex;flex-wrap:wrap;gap:6px;}
-.ec{background:var(--s2);border:1px solid var(--ln);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;transition:background .14s,border-color .14em;display:flex;align-items:center;gap:4px;}
+.ec{background:var(--s2);border:1px solid var(--ln);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;transition:background .14s;display:flex;align-items:center;gap:4px;}
 .ec.on{background:var(--s4);border-color:var(--ln2);color:var(--cr);}
 .cmt-box{margin:2px 20px 0;background:var(--s2);border:1px solid var(--ln);border-radius:11px;padding:11px 13px;transition:border-color .18s;}
 .cmt-box:focus-within{border-color:var(--ln2);}
@@ -282,21 +291,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .cmt-ta::placeholder{color:var(--tx3);}
 .cmt-cnt{text-align:right;font-size:9px;color:var(--tx3);margin-top:4px;}
 
-/* ─── PROFILE ─── */
-.prof-hd{padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;}
-.prof-card{margin:0 20px 16px;padding:20px;border-radius:18px;background:var(--s1);border:1px solid var(--ln);display:flex;align-items:center;gap:14px;}
-.prof-ava{width:60px;height:60px;font-size:26px;}
-.prof-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.03em;}
-.prof-handle{font-size:11px;color:var(--tx2);margin-top:2px;}
-.prof-code{font-family:'Syne',sans-serif;font-size:12px;color:var(--bl);letter-spacing:.1em;margin-top:4px;}
-.prof-sec{margin:0 20px 10px;}
-.prof-sec-ttl{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);margin-bottom:8px;}
-.prof-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--ln);}
-.prof-row:last-child{border:none;}
-.prof-row-l{font-size:13px;}
-.prof-row-r{font-size:12px;color:var(--tx2);}
-
-/* ─── MATCH DETAIL MODAL ─── */
+/* MATCH DETAIL MODAL */
 .md-bg{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55);display:none;}
 .md-bg.on{display:block;}
 .md-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:22px 22px 0 0;border-top:1px solid var(--ln2);transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:88%;overflow-y:auto;padding-bottom:var(--sab);}
@@ -324,17 +319,21 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .pb:nth-child(1){animation:eq1 .65s ease-in-out infinite alternate;}
 .pb:nth-child(2){animation:eq2 .65s ease-in-out infinite alternate .15s;}
 .pb:nth-child(3){animation:eq1 .65s ease-in-out infinite alternate .3s;}
-@keyframes eq1{to{height:3px}}
-@keyframes eq2{0%{height:13px}to{height:4px}}
+@keyframes eq1{to{height:3px}}@keyframes eq2{0%{height:13px}to{height:4px}}
 @keyframes sp{to{transform:rotate(360deg)}}
-.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--s4);border-top-color:var(--cr);animation:sp .7s linear infinite;display:none;}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--s4);border-top-color:var(--cr);animation:sp .7s linear infinite;}
 .empty-state{text-align:center;padding:48px 24px;color:var(--tx3);font-size:13px;line-height:1.8;}
 .empty-state .em{font-size:32px;margin-bottom:10px;}
+
+/* SETTINGS input */
+.set-inp{width:100%;background:var(--s2);border:1px solid var(--ln2);border-radius:13px;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--tx);outline:none;transition:border-color .18s;margin-bottom:10px;}
+.set-inp:focus{border-color:var(--cr2);}
+.set-inp::placeholder{color:var(--tx3);}
 </style>
 </head>
 <body>
 
-<!-- ══ SPLASH ══ -->
+<!-- SPLASH -->
 <div class="scr on" id="scr-splash" onclick="boot()">
   <div class="sp-content">
     <div class="sp-mark">
@@ -357,10 +356,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
     </div>
   </div>
   <div class="sp-hint"><div class="sp-hint-txt">タップして始める</div><div class="sp-hint-line"></div></div>
-  <div class="sp-ver">v2.0</div>
+  <div class="sp-ver">v4.0</div>
 </div>
 
-<!-- ══ ONBOARDING: STEP 1 – 名前・アイコン ══ -->
+<!-- ONBOARDING -->
 <div class="scr" id="scr-onboard">
   <div class="ob-inner">
     <div class="ob-logo">hearme</div>
@@ -370,30 +369,40 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
         <div class="ob-dot" id="dot2"></div>
         <div class="ob-dot" id="dot3"></div>
       </div>
-      <!-- Step 1 -->
+      <!-- Step 1: name + photo avatar -->
       <div id="ob-s1">
         <div class="ob-ttl">あなたのことを<br>教えてください</div>
-        <div class="ob-sub">名前はフレンドと共有されます。ニックネームでOK。</div>
+        <div class="ob-sub">名前はフレンドに表示されます。ニックネームでOK。</div>
         <input class="ob-inp" id="ob-name" placeholder="ニックネーム（例：ゆーき）" maxlength="20"/>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;">アイコンを選ぶ</div>
-        <div class="ob-ava-row" id="ob-ava-row">
-          <div class="ava-opt on" onclick="pickAva(this,'🎧')">🎧</div>
-          <div class="ava-opt" onclick="pickAva(this,'🎵')">🎵</div>
-          <div class="ava-opt" onclick="pickAva(this,'🌙')">🌙</div>
-          <div class="ava-opt" onclick="pickAva(this,'☀️')">☀️</div>
-          <div class="ava-opt" onclick="pickAva(this,'🌊')">🌊</div>
-          <div class="ava-opt" onclick="pickAva(this,'🌸')">🌸</div>
-          <div class="ava-opt" onclick="pickAva(this,'🍂')">🍂</div>
-          <div class="ava-opt" onclick="pickAva(this,'⚡')">⚡</div>
-          <div class="ava-opt" onclick="pickAva(this,'🐧')">🐧</div>
-          <div class="ava-opt" onclick="pickAva(this,'🦋')">🦋</div>
+        <input class="ob-inp" id="ob-bio" placeholder="一言自己紹介（任意）" maxlength="40"/>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;">アイコンを設定</div>
+        <!-- Photo upload -->
+        <div class="ava-upload-area" id="ob-ava-area" onclick="document.getElementById('ob-photo-in').click()">
+          <div class="ava-placeholder" id="ob-ava-placeholder">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#44464d" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>写真を選ぶ</span>
+          </div>
+        </div>
+        <input type="file" id="ob-photo-in" accept="image/*" style="display:none;" onchange="handlePhotoOb(this)"/>
+        <div style="font-size:11px;color:var(--tx3);margin:8px 0 8px;text-align:center;">または絵文字で選ぶ</div>
+        <div class="ava-emoji-row" id="ob-ava-row">
+          <div class="ava-opt on" onclick="pickAvaEmoji(this,'🎧')">🎧</div>
+          <div class="ava-opt" onclick="pickAvaEmoji(this,'🎵')">🎵</div>
+          <div class="ava-opt" onclick="pickAvaEmoji(this,'🌙')">🌙</div>
+          <div class="ava-opt" onclick="pickAvaEmoji(this,'☀️')">☀️</div>
+          <div class="ava-opt" onclick="pickAvaEmoji(this,'🌊')">🌊</div>
+          <div class="ava-opt" onclick="pickAvaEmoji(this,'🌸')">🌸</div>
+          <div class="ava-opt" onclick="pickAvaEmoji(this,'🍂')">🍂</div>
+          <div class="ava-opt" onclick="pickAvaEmoji(this,'⚡')">⚡</div>
+          <div class="ava-opt" onclick="pickAvaEmoji(this,'🐧')">🐧</div>
+          <div class="ava-opt" onclick="pickAvaEmoji(this,'🦋')">🦋</div>
         </div>
         <button class="btn-p ob-btn" onclick="obNext1()">次へ →</button>
       </div>
-      <!-- Step 2 -->
+      <!-- Step 2: invite code -->
       <div id="ob-s2" style="display:none;">
         <div class="ob-ttl">あなたの招待コード</div>
-        <div class="ob-sub">このコードを友達に共有して、お互いの曲が見られるようになります。<br>BeRealと同じく、<strong style="color:var(--cr)">友達と交換してから</strong>初めて使えます。</div>
+        <div class="ob-sub">このコードを友達と交換すると、お互いの曲が見られるようになります。</div>
         <div class="inv-box">
           <div style="font-size:11px;color:var(--tx3);text-align:center;margin-bottom:4px;">あなたのコード</div>
           <div class="inv-code" id="my-code">------</div>
@@ -413,10 +422,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
         <button class="btn-p ob-btn" onclick="obNext2()" style="margin-top:20px;">次へ →</button>
         <div class="ob-skip" onclick="obNext2()">あとで追加する</div>
       </div>
-      <!-- Step 3 -->
+      <!-- Step 3: done -->
       <div id="ob-s3" style="display:none;">
-        <div class="ob-ttl">準備完了！</div>
-        <div class="ob-sub">今日の気分の曲をシェアしてみよう。<br>友達の曲は友達が投稿するまで見られません。</div>
+        <div class="ob-ttl">準備完了！🎉</div>
+        <div class="ob-sub">今日の気分の曲をシェアしてみよう。友達が投稿するまでは🔒。お互いが投稿してから開きます。</div>
         <div style="font-size:48px;text-align:center;margin:24px 0;">🎵</div>
         <button class="btn-p ob-btn" onclick="obFinish()">hearmeをはじめる</button>
       </div>
@@ -424,63 +433,60 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
   </div>
 </div>
 
-<!-- ══ BEREAL OVERLAY ══ -->
+<!-- BEREAL OVERLAY -->
 <div id="bereal-ov">
   <div class="br-icon">
     <svg width="34" height="34" viewBox="0 0 80 80" fill="none"><ellipse cx="40" cy="38" rx="21" ry="27" stroke="#080809" stroke-width="3"/><line x1="30" y1="38" x2="30" y2="31" stroke="#080809" stroke-width="3" stroke-linecap="round"/><line x1="36" y1="38" x2="36" y2="27" stroke="#080809" stroke-width="3" stroke-linecap="round"/><line x1="42" y1="38" x2="42" y2="29" stroke="#080809" stroke-width="3" stroke-linecap="round"/></svg>
   </div>
   <div class="br-ttl">今の気分は？🎵</div>
-  <div class="br-sub">hearmeの時間です！<br>友達も今この瞬間、曲を選んでいます。</div>
+  <div class="br-sub">hearmeの時間です！<br>フレンドも今この瞬間、曲を選んでいます。</div>
   <div class="br-timer" id="br-t">03:00</div>
   <button class="btn-p br-btn" onclick="openPostBereal()">今すぐシェアする</button>
   <div class="br-later" onclick="skipBereal()">あとで…（遅れた投稿になります）</div>
 </div>
 
-<!-- ══ HOME ══ -->
+<!-- HOME -->
 <div class="scr" id="scr-home">
-  <div class="sb"><span id="sb-time">9:41</span><span id="sb-loc" style="color:var(--tx3);">📍 取得中...</span></div>
+  <div class="sb"><span id="sb-time">9:41</span><span id="sb-loc" style="color:var(--tx3);font-size:11px;"></span></div>
   <div class="pg">
     <div class="hm-hd">
       <div class="hm-logo">
         <svg width="18" height="18" viewBox="0 0 80 80" fill="none"><ellipse cx="40" cy="38" rx="21" ry="27" stroke="#e8e3d7" stroke-width="2.8"/><line x1="30" y1="38" x2="30" y2="31" stroke="#e8e3d7" stroke-width="2.8" stroke-linecap="round"/><line x1="36" y1="38" x2="36" y2="27" stroke="#e8e3d7" stroke-width="2.8" stroke-linecap="round"/><line x1="42" y1="38" x2="42" y2="29" stroke="#e8e3d7" stroke-width="2.8" stroke-linecap="round"/></svg>
         <span class="syne" style="font-size:18px;font-weight:800;letter-spacing:-.04em;">hearme</span>
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;">
         <div class="pill" style="color:var(--rs);border-color:rgba(255,101,133,.2);gap:5px;font-size:10px;"><span class="ld"></span>LIVE</div>
         <div class="ava" id="hm-ava" style="width:32px;height:32px;font-size:16px;cursor:pointer;" onclick="go('profile')">🎧</div>
       </div>
     </div>
 
-    <div class="notif-bar" id="notif-bar" onclick="reqNotif()" style="display:none;">
+    <div class="notif-bar" id="notif-bar" style="display:none;" onclick="reqNotif()">
       <div style="font-size:22px;flex-shrink:0;">🔔</div>
-      <div style="flex:1;">
-        <div class="notif-bar-ttl">ランダム通知をONに</div>
-        <div class="notif-bar-sub">BeReal方式で1日1回届く</div>
-      </div>
+      <div style="flex:1;"><div class="notif-bar-ttl">通知をONにしよう</div><div class="notif-bar-sub">1日1回だけ届く hearme 通知</div></div>
       <button class="notif-bar-btn">許可する</button>
     </div>
+
+    <div id="streak-bar-wrap"></div>
 
     <button class="btn-p share-btn" onclick="go('post')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
       今の気分の曲をシェア
     </button>
 
-    <!-- フレンドいない場合のロック -->
     <div class="lock-wall" id="lock-wall" style="display:none;">
       <div class="lock-icon">🔒</div>
       <div class="lock-ttl">友達と交換してから<br>フィードが開きます</div>
-      <div class="lock-sub">招待コードを交換すると、お互いの投稿が見られるようになります。BeRealのように。</div>
+      <div class="lock-sub">招待コードを友達と交換するとお互いの投稿が見られるようになります。</div>
       <button class="btn-p lock-btn" onclick="go('profile')">友達を追加する →</button>
     </div>
 
-    <!-- フレンドいる場合のフィード -->
     <div id="friend-feed" style="display:none;">
-      <div class="sec-hd"><span class="lbl">フレンドのフィード</span><span style="font-size:10px;color:var(--tx3);" id="friend-count">0人</span></div>
+      <div class="sec-hd"><span class="lbl">フレンドのフィード</span><span style="font-size:10px;color:var(--tx3);" id="friend-count"></span></div>
       <div id="feed-list"></div>
     </div>
 
     <div id="my-post-sec" style="display:none;">
-      <div class="sec-hd" style="margin-top:8px;"><span class="lbl">自分の最新投稿</span></div>
+      <div class="sec-hd" style="margin-top:6px;"><span class="lbl">今日の自分</span></div>
       <div id="my-latest-post"></div>
     </div>
 
@@ -495,40 +501,34 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
   </div>
 </div>
 
-<!-- ══ MATCH ══ -->
+<!-- MATCH -->
 <div class="scr" id="scr-match">
   <div class="sb"><span id="sb-time-m">9:41</span></div>
   <div class="pg">
-    <div style="padding:15px 20px 3px;display:flex;align-items:center;justify-content:space-between;">
-      <span class="syne" style="font-size:24px;font-weight:800;letter-spacing:-.03em;">マッチ</span>
-    </div>
-    <div style="padding:2px 20px 10px;font-size:11px;color:var(--tx3);">同じ曲・同じ気持ちのフレンドを発見</div>
+    <div style="padding:15px 20px 3px;"><span class="syne" style="font-size:24px;font-weight:800;letter-spacing:-.03em;">マッチ</span></div>
+    <div style="padding:2px 20px 10px;font-size:11px;color:var(--tx3);">フレンドと同じ曲・同じ気持ち</div>
     <div class="m-tabs">
       <button class="mtb on" id="mt-s" onclick="mTab('s')">🎵 曲マッチ</button>
       <button class="mtb" id="mt-f" onclick="mTab('f')">💭 気持ちマッチ</button>
     </div>
-    <div id="mp-s">
-      <div id="match-song-list"></div>
-    </div>
-    <div id="mp-f" style="display:none;">
-      <div id="match-feel-list"></div>
-    </div>
+    <div id="mp-s"><div id="match-song-list"></div></div>
+    <div id="mp-f" style="display:none;"><div id="match-feel-list"></div></div>
     <div style="height:10px;"></div>
   </div>
   <div class="bnav">
     <button class="nb" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nb-lbl">ホーム</span></button>
-    <button class="nb on" onclick="go('match')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span class="nb-lbl">マッチ</span></button>
+    <button class="nb on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span class="nb-lbl">マッチ</span></button>
     <div class="post-fab" onclick="go('post')"><div class="fab-circle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080809" stroke-width="2.6"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><span class="fab-lbl">投稿</span></div>
     <button class="nb" onclick="go('events')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="nb-lbl">イベント</span></button>
     <button class="nb" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nb-lbl">プロフィール</span></button>
   </div>
 </div>
 
-<!-- ══ EVENTS ══ -->
+<!-- EVENTS -->
 <div class="scr" id="scr-events">
   <div class="sb"><span id="sb-time-e">9:41</span></div>
   <div class="pg">
-    <div style="padding:15px 20px 8px;display:flex;align-items:center;justify-content:space-between;"><span class="syne" style="font-size:24px;font-weight:800;letter-spacing:-.03em;">イベント</span><button class="btn-g" style="height:28px;padding:0 10px;font-size:11px;border-radius:8px;" onclick="toast('イベント作成は近日公開')">＋ 作成</button></div>
+    <div style="padding:15px 20px 8px;display:flex;align-items:center;justify-content:space-between;"><span class="syne" style="font-size:24px;font-weight:800;letter-spacing:-.03em;">イベント</span><button class="btn-g" style="height:28px;padding:0 10px;font-size:11px;border-radius:8px;" onclick="toast('イベント作成は近日公開！')">＋ 作成</button></div>
     <div class="ev-hero"><div class="ev-hero-bg"></div><div class="ev-hero-cnt"><div class="ev-badge">注目</div><div class="ev-ttl">深夜の孤独を音楽で繋ぐ夜</div><div class="ev-sub">4月25日 23:00〜 · オンライン · 無料</div></div></div>
     <div class="ev-filter"><div class="ev-chip on" onclick="evChip(this)">すべて</div><div class="ev-chip" onclick="evChip(this)">オンライン</div><div class="ev-chip" onclick="evChip(this)">渋谷区</div><div class="ev-chip" onclick="evChip(this)">無料</div><div class="ev-chip" onclick="evChip(this)">今週</div></div>
     <div class="lbl" style="padding:0 20px 8px;">開催予定</div>
@@ -545,24 +545,44 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
   </div>
 </div>
 
-<!-- ══ POST ══ -->
+<!-- POST -->
 <div class="scr" id="scr-post">
   <div class="sb"><span id="sb-time-p">9:41</span></div>
-  <div style="position:absolute;top:calc(var(--sat) + 24px);left:0;right:0;bottom:calc(var(--sab) + 58px);overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  <div style="position:absolute;top:calc(var(--sat)+24px);left:0;right:0;bottom:calc(var(--sab)+58px);overflow-y:auto;-webkit-overflow-scrolling:touch;">
     <div class="pt-hd">
       <span style="font-size:12px;color:var(--tx2);cursor:pointer;" onclick="go('home')">キャンセル</span>
       <span class="pt-ttl">曲をシェア</span>
       <button class="btn-p pt-go" id="pt-go" onclick="doPost()">投稿</button>
     </div>
-    <div class="pt-bereal" id="pt-br"><span class="ld"></span><span class="pt-bereal-txt">ランダム通知からの投稿</span></div>
+    <div class="pt-bereal" id="pt-br"><span class="ld"></span><span class="pt-bereal-txt">hearme通知からの投稿</span></div>
+
+    <!-- YouTube URL貼り付け -->
+    <div style="padding:0 20px 6px;font-size:10px;color:var(--tx3);font-weight:600;letter-spacing:.06em;">YouTubeのURLを貼り付ける</div>
+    <div class="yt-paste">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff5050"><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.1 2.7 12 2.7 12 2.7s-4.1 0-6.8.2c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.2v1.9c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.5 21.5 12 21.5 12 21.5s4.1 0 6.8-.3c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-1.9C23.3 9.1 23 7 23 7zM9.7 15.5V8.3l8.1 3.6-8.1 3.6z"/></svg>
+      <input class="yt-paste-in" id="yt-url-in" placeholder="https://youtube.com/watch?v=..." oninput="onYtUrlInput(this.value)"/>
+      <button class="yt-paste-btn" onclick="parseYtUrl()">読み込む</button>
+    </div>
+
+    <!-- 曲名検索 -->
+    <div style="padding:0 20px 6px;font-size:10px;color:var(--tx3);font-weight:600;letter-spacing:.06em;">または曲名で検索</div>
     <div class="srch">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input class="srch-in" id="srch-in" placeholder="曲名・アーティストで検索..." onkeydown="if(event.key==='Enter')doSearch()"/>
+      <input class="srch-in" id="srch-in" placeholder="曲名・アーティスト名..." onkeydown="if(event.key==='Enter')doSearch()"/>
       <button class="srch-btn" onclick="doSearch()">検索</button>
     </div>
-    <div id="srch-load" style="display:none;justify-content:center;padding:14px;"><div class="spin" style="display:block;"></div></div>
-    <div id="sel-prev" class="sel-prev" style="display:none;border-radius:11px;"><div class="sel-th"><img id="sel-img" src="" alt=""/></div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;" id="sel-t"></div><div style="font-size:10px;color:var(--tx2);margin-top:1px;" id="sel-a"></div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#43cfc6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+
+    <div id="srch-load" style="display:none;justify-content:center;padding:14px;"><div class="spin"></div></div>
+    <div id="sel-prev" class="sel-prev" style="display:none;border-radius:11px;">
+      <div class="sel-th"><img id="sel-img" src="" alt=""/></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;" id="sel-t"></div>
+        <div style="font-size:10px;color:var(--tx2);margin-top:1px;" id="sel-a"></div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#43cfc6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
     <div id="srch-res"></div>
+
     <div class="emo-sec">
       <div class="emo-ttl">今の気分は？</div>
       <div class="emo-grid">
@@ -574,6 +594,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
         <div class="ec" onclick="pickE(this)">🤩 テンション高め</div>
         <div class="ec" onclick="pickE(this)">😴 眠い</div>
         <div class="ec" onclick="pickE(this)">😶 無感情</div>
+        <div class="ec" onclick="pickE(this)">🔥 熱い</div>
+        <div class="ec" onclick="pickE(this)">💭 考え中</div>
       </div>
     </div>
     <div class="cmt-box">
@@ -591,40 +613,47 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
   </div>
 </div>
 
-<!-- ══ PROFILE ══ -->
+<!-- PROFILE -->
 <div class="scr" id="scr-profile">
   <div class="sb"><span id="sb-time-pr">9:41</span></div>
   <div class="pg">
-    <div class="prof-hd">
+    <div style="padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;">
       <span class="syne" style="font-size:24px;font-weight:800;letter-spacing:-.03em;">プロフィール</span>
-      <button class="btn-g" style="height:28px;padding:0 10px;font-size:11px;border-radius:8px;" onclick="go('settings')">設定</button>
+      <button class="btn-g" style="height:28px;padding:0 10px;font-size:11px;border-radius:8px;" onclick="go('settings')">編集</button>
     </div>
     <div class="prof-card">
       <div class="ava prof-ava" id="prof-ava-disp">🎧</div>
-      <div>
+      <div style="flex:1;min-width:0;">
         <div class="prof-name" id="prof-name-disp">—</div>
-        <div class="prof-handle" id="prof-handle-disp">hearme ユーザー</div>
+        <div class="prof-bio" id="prof-bio-disp"></div>
         <div class="prof-code" id="prof-code-disp">CODE: ------</div>
       </div>
     </div>
 
-    <!-- 統計 -->
     <div class="hs-stats">
       <div class="st-card"><div class="st-v" id="stat-posts">0</div><div class="st-l">投稿曲数</div></div>
       <div class="st-card"><div class="st-v" id="stat-friends">0</div><div class="st-l">フレンド数</div></div>
+      <div class="st-card"><div class="st-v" id="stat-streak">0</div><div class="st-l">連続投稿日</div></div>
+    </div>
+
+    <!-- 気分グラフ（実データ） -->
+    <div class="mg" id="mood-graph-wrap" style="display:none;">
+      <div class="mg-ttl">今週の気分ログ</div>
+      <div class="mg-bars" id="mood-graph-bars"></div>
     </div>
 
     <!-- フレンド管理 -->
     <div class="prof-sec">
-      <div class="prof-sec-ttl" style="margin-bottom:12px;">フレンド</div>
+      <div class="prof-sec-ttl" style="margin-bottom:12px;">招待コード</div>
       <div class="inv-box" style="max-width:100%;margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--tx3);text-align:center;margin-bottom:4px;">あなたの招待コード</div>
+        <div style="font-size:11px;color:var(--tx3);text-align:center;margin-bottom:4px;">あなたのコード</div>
         <div class="inv-code" id="prof-code-big">------</div>
         <div class="inv-share-row">
           <button class="btn-p inv-share-btn" onclick="shareCode()">シェア</button>
           <button class="btn-g inv-share-btn" onclick="copyCode()">コピー</button>
         </div>
       </div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:6px;">友達のコードを追加</div>
       <div class="inv-enter" style="max-width:100%;">
         <input id="fr-code-prof" placeholder="友達のコードを入力..." maxlength="6" style="text-transform:uppercase;"/>
         <button class="btn-p" onclick="addFriendByCodeProf()" style="height:48px;padding:0 18px;border-radius:11px;font-size:13px;">追加</button>
@@ -633,12 +662,11 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 
     <div class="prof-sec" style="margin-top:14px;">
       <div class="prof-sec-ttl">フレンドリスト</div>
-      <div class="friends-list" id="friends-list-disp" style="max-width:100%;"></div>
+      <div class="friends-list" id="friends-list-disp"></div>
     </div>
 
-    <!-- 自分の投稿履歴 -->
     <div class="prof-sec" style="margin-top:14px;">
-      <div class="prof-sec-ttl" style="margin-bottom:8px;">自分の投稿履歴</div>
+      <div class="prof-sec-ttl" style="margin-bottom:8px;">投稿履歴</div>
       <div id="my-history-list"></div>
     </div>
 
@@ -653,19 +681,25 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
   </div>
 </div>
 
-<!-- ══ SETTINGS ══ -->
+<!-- SETTINGS -->
 <div class="scr" id="scr-settings">
   <div class="sb"><span>設定</span></div>
   <div class="pg">
-    <div style="padding:16px 20px 12px;display:flex;align-items:center;gap:14px;">
+    <div style="padding:16px 20px 20px;display:flex;align-items:center;gap:14px;">
       <span style="font-size:12px;color:var(--tx2);cursor:pointer;" onclick="go('profile')">← 戻る</span>
-      <span class="syne" style="font-size:20px;font-weight:800;">設定</span>
+      <span class="syne" style="font-size:20px;font-weight:800;">プロフィール編集</span>
     </div>
-    <div class="prof-sec">
-      <div class="prof-sec-ttl" style="margin-bottom:12px;">プロフィール編集</div>
-      <input class="ob-inp" id="set-name" placeholder="ニックネーム" maxlength="20"/>
-      <div style="font-size:11px;color:var(--tx3);margin:10px 0 8px;">アイコン変更</div>
-      <div class="ob-ava-row" id="set-ava-row">
+
+    <!-- Photo avatar -->
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px;">
+      <div class="ava-upload-area" id="set-ava-area" style="margin-bottom:10px;" onclick="document.getElementById('set-photo-in').click()">
+        <div class="ava-placeholder" id="set-ava-placeholder">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#44464d" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>写真を変更</span>
+        </div>
+      </div>
+      <input type="file" id="set-photo-in" accept="image/*" style="display:none;" onchange="handlePhotoSet(this)"/>
+      <div class="ava-emoji-row" id="set-ava-row" style="justify-content:center;">
         <div class="ava-opt" onclick="pickAvaSet(this,'🎧')">🎧</div>
         <div class="ava-opt" onclick="pickAvaSet(this,'🎵')">🎵</div>
         <div class="ava-opt" onclick="pickAvaSet(this,'🌙')">🌙</div>
@@ -674,22 +708,25 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
         <div class="ava-opt" onclick="pickAvaSet(this,'🌸')">🌸</div>
         <div class="ava-opt" onclick="pickAvaSet(this,'🍂')">🍂</div>
         <div class="ava-opt" onclick="pickAvaSet(this,'⚡')">⚡</div>
-        <div class="ava-opt" onclick="pickAvaSet(this,'🐧')">🐧</div>
-        <div class="ava-opt" onclick="pickAvaSet(this,'🦋')">🦋</div>
       </div>
-      <button class="btn-p" style="width:100%;height:48px;border-radius:13px;margin-top:14px;" onclick="saveSettings()">保存する</button>
     </div>
-    <div class="prof-sec" style="margin-top:20px;">
-      <div class="prof-sec-ttl" style="margin-bottom:8px;">通知</div>
-      <div class="prof-row">
-        <span class="prof-row-l">ランダム通知 (BeReal方式)</span>
+
+    <div style="padding:0 20px;">
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:6px;">ニックネーム</div>
+      <input class="set-inp" id="set-name" placeholder="ニックネーム" maxlength="20"/>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:6px;">一言自己紹介</div>
+      <input class="set-inp" id="set-bio" placeholder="例：音楽で繋がりたい　深夜型🌙" maxlength="40"/>
+      <button class="btn-p" style="width:100%;height:50px;border-radius:15px;margin-top:8px;" onclick="saveSettings()">保存する ✓</button>
+    </div>
+
+    <div style="margin:24px 20px 0;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);margin-bottom:12px;">その他</div>
+      <div style="padding:11px 0;border-bottom:1px solid var(--ln);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:13px;">通知</span>
         <button class="btn-g" style="height:28px;padding:0 10px;font-size:11px;border-radius:8px;" onclick="reqNotif()">許可する</button>
       </div>
-    </div>
-    <div class="prof-sec" style="margin-top:20px;">
-      <div class="prof-sec-ttl" style="margin-bottom:8px;">データ</div>
-      <div class="prof-row" style="cursor:pointer;" onclick="confirmReset()">
-        <span class="prof-row-l" style="color:var(--rs);">すべてのデータをリセット</span>
+      <div style="padding:11px 0;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="confirmReset()">
+        <span style="font-size:13px;color:var(--rs);">データをリセット</span>
       </div>
     </div>
     <div style="height:20px;"></div>
@@ -703,14 +740,13 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
   </div>
 </div>
 
-<!-- ══ MATCH DETAIL MODAL ══ -->
+<!-- MATCH DETAIL MODAL -->
 <div class="md-bg" id="md-bg" onclick="closeMD(event)">
   <div class="md-sheet">
     <div class="md-pull"></div>
     <div class="md-pers">
       <div class="ava" id="md-a" style="width:44px;height:44px;font-size:19px;">🎧</div>
       <div style="flex:1;"><div style="font-size:14px;font-weight:600;" id="md-n">—</div><div style="font-size:11px;color:var(--tx2);margin-top:2px;" id="md-e">—</div></div>
-      <div class="pill" style="font-size:10px;" id="md-d"></div>
     </div>
     <div class="md-sc">
       <div class="md-thumb" id="md-th"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".25"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
@@ -718,9 +754,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
       <div class="md-sa" id="md-ar">アーティスト</div>
       <div class="play-row">
         <button class="btn-p play-main" onclick="mdPlay()">
-          <div class="pi" id="md-pi"><div class="pb" style="height:8px;"></div><div class="pb" style="height:13px;"></div><div class="pb" style="height:8px;"></div></div>
-          <svg id="md-ico" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span id="md-lbl">YouTubeで開く</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.1 2.7 12 2.7 12 2.7s-4.1 0-6.8.2c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.2v1.9c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.5 21.5 12 21.5 12 21.5s4.1 0 6.8-.3c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-1.9C23.3 9.1 23 7 23 7zM9.7 15.5V8.3l8.1 3.6-8.1 3.6z"/></svg>
+          <span id="md-lbl">YouTubeで聴く</span>
         </button>
       </div>
     </div>
@@ -735,737 +770,703 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast-el"></div>
 
 <script>
-// ══════════════════════════════════════════════
-// STATE & DATA
-// ══════════════════════════════════════════════
-let _song = null, _emo = null, _mdPlay = false, _mdVid = '', _brInt = null, _brSec = 180, _fromBr = false;
-let _setAva = '🎧';
-const YTK = 'AIzaSyD_placeholder_replace_me'; // Replace with real key when deploying
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let _song=null,_emo=null,_mdVid='',_brInt=null,_brSec=180,_fromBr=false;
+let _obAvaType='emoji',_obAvaVal='🎧',_obAvaPhoto='';
+let _setAvaType='emoji',_setAvaVal='🎧',_setAvaPhoto='';
 
-// ─ Storage helpers ─
-const S = {
-  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
-  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
-  del: k => localStorage.removeItem(k)
+// ═══════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════
+const S={
+  get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},
+  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
+  del:k=>localStorage.removeItem(k)
 };
-
-// ─ Profile ─
-function getProfile() {
-  return S.get('hm_profile') || { name: '', ava: '🎧', code: '', setupDone: false };
-}
-function saveProfile(p) { S.set('hm_profile', p); }
-
-// ─ Friends (LocalStorage peer-to-peer simulation) ─
-// Each friend entry: { code, name, ava, posts: [] }
-function getFriends() { return S.get('hm_friends') || []; }
-function saveFriends(f) { S.set('hm_friends', f); }
-
-// ─ My posts ─
-function getMyPosts() { return S.get('hm_posts') || []; }
-function saveMyPosts(p) { S.set('hm_posts', p.slice(0, 100)); }
-
-// ─ Generate invite code ─
-function genCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+function getProfile(){return S.get('hm_profile')||{name:'',ava:'🎧',avaPhoto:'',bio:'',code:'',setupDone:false};}
+function saveProfile(p){S.set('hm_profile',p);}
+function getFriends(){return S.get('hm_friends')||[];}
+function saveFriends(f){S.set('hm_friends',f);}
+function getMyPosts(){return S.get('hm_posts')||[];}
+function saveMyPosts(p){S.set('hm_posts',p.slice(0,100));}
+function genCode(){
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6},()=>c[Math.floor(Math.random()*c.length)]).join('');
 }
 
-// ──────────────────────────────────────────────
-// BOOT
-// ──────────────────────────────────────────────
-function boot() {
-  const prof = getProfile();
-  if (!prof.setupDone) {
-    go('onboard');
-    return;
+// ═══════════════════════════════════════════
+// AVATAR RENDER HELPER
+// ═══════════════════════════════════════════
+function renderAva(el, avaPhoto, ava, size){
+  el.style.fontSize = size ? `${size*0.44}px` : '';
+  if(avaPhoto){
+    el.innerHTML = `<img src="${avaPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt=""/>`;
+  } else {
+    el.innerHTML = ava || '🎧';
   }
+}
+
+// ═══════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════
+function boot(){
+  const prof=getProfile();
+  if(!prof.setupDone){go('onboard');return;}
   startApp();
 }
 
-function startApp() {
+function startApp(){
   go('home');
   startClock();
   startLocation();
   checkNotifBar();
   renderHome();
-  // BeReal: trigger after random delay between 30s–3min (for demo, 15s)
-  setTimeout(() => {
-    if (document.getElementById('scr-home')?.classList.contains('on')) triggerBereal();
-  }, 15000);
+  scheduleBereal();
   // Handle invite URL
-  const urlCode = new URLSearchParams(location.search).get('invite');
-  if (urlCode) {
-    setTimeout(() => {
-      document.getElementById('fr-code-prof').value = urlCode.toUpperCase();
-      go('profile');
-      toast('招待コードを検出しました。追加してください！');
-    }, 500);
-  }
-}
-
-// ──────────────────────────────────────────────
-// NAVIGATION
-// ──────────────────────────────────────────────
-function go(id) {
-  document.querySelectorAll('.scr').forEach(s => s.classList.remove('on'));
-  document.getElementById('scr-' + id)?.classList.add('on');
-  if (id === 'home') renderHome();
-  if (id === 'profile') renderProfile();
-  if (id === 'match') renderMatch();
-  if (id === 'settings') openSettings();
-}
-
-// ──────────────────────────────────────────────
-// CLOCK (real time)
-// ──────────────────────────────────────────────
-function startClock() {
-  function tick() {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const t = `${h}:${m}`;
-    ['sb-time', 'sb-time-m', 'sb-time-e', 'sb-time-p', 'sb-time-pr'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = t;
-    });
-  }
-  tick();
-  setInterval(tick, 10000);
-}
-
-// ──────────────────────────────────────────────
-// LOCATION (real)
-// ──────────────────────────────────────────────
-function startLocation() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(pos => {
-    const { latitude: lat, longitude: lon } = pos.coords;
-    // Reverse geocode via nominatim
-    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ja`)
-      .then(r => r.json())
-      .then(d => {
-        const ward = d.address?.city_district || d.address?.suburb || d.address?.city || d.address?.town || '';
-        const city = d.address?.city || d.address?.town || '';
-        const loc = ward || city || '現在地';
-        document.getElementById('sb-loc').textContent = `📍 ${loc}`;
-        const prof = getProfile();
-        prof.location = loc;
-        saveProfile(prof);
-      })
-      .catch(() => {
-        document.getElementById('sb-loc').textContent = '📍 取得済み';
-      });
-  }, () => {
-    document.getElementById('sb-loc').textContent = '';
-  });
-}
-
-// ──────────────────────────────────────────────
-// ONBOARDING
-// ──────────────────────────────────────────────
-let _obAva = '🎧';
-let _obStep = 1;
-
-function pickAva(el, emo) {
-  document.querySelectorAll('#ob-ava-row .ava-opt').forEach(x => x.classList.remove('on'));
-  el.classList.add('on');
-  _obAva = emo;
-}
-
-function obNext1() {
-  const name = document.getElementById('ob-name').value.trim();
-  if (!name) { toast('ニックネームを入力してください'); return; }
-  const prof = getProfile();
-  prof.name = name;
-  prof.ava = _obAva;
-  if (!prof.code) prof.code = genCode();
-  saveProfile(prof);
-  // show step 2
-  document.getElementById('ob-s1').style.display = 'none';
-  document.getElementById('ob-s2').style.display = 'block';
-  document.getElementById('dot1').classList.add('on');
-  document.getElementById('dot2').classList.add('on');
-  document.getElementById('my-code').textContent = prof.code;
-  _obStep = 2;
-}
-
-function obNext2() {
-  document.getElementById('ob-s2').style.display = 'none';
-  document.getElementById('ob-s3').style.display = 'block';
-  document.getElementById('dot3').classList.add('on');
-  _obStep = 3;
-}
-
-function obFinish() {
-  const prof = getProfile();
-  prof.setupDone = true;
-  saveProfile(prof);
-  startApp();
-}
-
-// ──────────────────────────────────────────────
-// FRIEND CODE SYSTEM
-// ──────────────────────────────────────────────
-function shareCode() {
-  const prof = getProfile();
-  const url = `${location.origin}${location.pathname}?invite=${prof.code}`;
-  const msg = `hearmeで繋がろう！\n招待コード: ${prof.code}\n${url}`;
-  if (navigator.share) {
-    navigator.share({ title: 'hearme 招待', text: msg, url }).catch(() => {});
-  } else {
-    navigator.clipboard?.writeText(msg).then(() => toast('招待リンクをコピーしました！'));
-  }
-}
-
-function copyCode() {
-  const prof = getProfile();
-  navigator.clipboard?.writeText(prof.code).then(() => toast('コードをコピーしました！')).catch(() => toast(`コード: ${prof.code}`));
-}
-
-function addFriendByCode() {
-  const code = document.getElementById('fr-code-in').value.trim().toUpperCase();
-  _addFriend(code, () => { document.getElementById('fr-code-in').value = ''; });
-}
-
-function addFriendByCodeProf() {
-  const code = document.getElementById('fr-code-prof').value.trim().toUpperCase();
-  _addFriend(code, () => { document.getElementById('fr-code-prof').value = ''; renderProfile(); });
-}
-
-function _addFriend(code, cb) {
-  if (!code || code.length !== 6) { toast('6文字のコードを入力してください'); return; }
-  const prof = getProfile();
-  if (code === prof.code) { toast('自分のコードは追加できません'); return; }
-  const friends = getFriends();
-  if (friends.find(f => f.code === code)) { toast('すでに追加済みのフレンドです'); return; }
-  // LocalStorage only: create a friend entry with no posts yet
-  // In real app this would look up Firebase
-  const newFriend = {
-    code,
-    name: `フレンド (${code})`,
-    ava: '🎵',
-    posts: [],
-    addedAt: new Date().toISOString()
-  };
-  friends.push(newFriend);
-  saveFriends(friends);
-  toast(`✅ フレンドを追加しました！ (${code})`);
-  if (cb) cb();
-}
-
-function removeFriend(code) {
-  if (!confirm('このフレンドを削除しますか？')) return;
-  const friends = getFriends().filter(f => f.code !== code);
-  saveFriends(friends);
-  renderProfile();
-  toast('フレンドを削除しました');
-}
-
-// ──────────────────────────────────────────────
-// HOME RENDER
-// ──────────────────────────────────────────────
-function renderHome() {
-  const prof = getProfile();
-  const friends = getFriends();
-  const myPosts = getMyPosts();
-
-  // Update avatar in header
-  document.getElementById('hm-ava').textContent = prof.ava || '🎧';
-
-  const hasFriends = friends.length > 0;
-
-  document.getElementById('lock-wall').style.display = hasFriends ? 'none' : 'block';
-  document.getElementById('friend-feed').style.display = hasFriends ? 'block' : 'none';
-
-  if (hasFriends) {
-    document.getElementById('friend-count').textContent = `${friends.length}人`;
-    const feedList = document.getElementById('feed-list');
-    feedList.innerHTML = '';
-
-    // Show each friend's latest post
-    let anyPost = false;
-    friends.forEach(fr => {
-      const posts = fr.posts || [];
-      if (posts.length === 0) {
-        // Show locked placeholder
-        const el = document.createElement('div');
-        el.className = 'card feed-card';
-        el.style.opacity = '.5';
-        el.innerHTML = `
-          <div class="ava" style="width:40px;height:40px;font-size:18px;">${esc(fr.ava)}</div>
-          <div class="fi">
-            <div class="fi-meta">${esc(fr.name)}</div>
-            <div class="fi-song" style="color:var(--tx3);">まだ投稿していません</div>
-          </div>
-          <div class="fi-r"><span style="font-size:18px;">🔒</span></div>`;
-        feedList.appendChild(el);
-      } else {
-        anyPost = true;
-        const p = posts[0];
-        const el = document.createElement('div');
-        el.className = 'card feed-card';
-        el.onclick = () => openMD({ a: fr.ava, n: fr.name, d: '', e: p.emo, s: p.song, ar: p.artist, c: p.comment || '—', v: p.vid, th: p.thumb });
-        el.innerHTML = `
-          <div class="ava" style="width:40px;height:40px;font-size:18px;">${esc(fr.ava)}</div>
-          <div class="fi">
-            <div class="fi-meta">${esc(fr.name)} · ${relTime(p.time)}</div>
-            <div class="fi-song">${esc(p.song)}</div>
-            <div class="fi-art">${esc(p.artist)}</div>
-          </div>
-          <div class="fi-r">
-            <div class="chip-emo">${esc(p.emo)}</div>
-            <div class="fi-time">${fmtTime(p.time)}</div>
-          </div>`;
-        feedList.appendChild(el);
+  const urlCode=new URLSearchParams(location.search).get('invite');
+  const urlName=new URLSearchParams(location.search).get('n');
+  const urlAva=new URLSearchParams(location.search).get('a');
+  const urlBio=new URLSearchParams(location.search).get('b');
+  if(urlCode){
+    setTimeout(()=>{
+      document.getElementById('fr-code-prof').value=urlCode.toUpperCase();
+      // Pre-fill friend info from URL
+      if(urlName){
+        const friends=getFriends();
+        if(!friends.find(f=>f.code===urlCode)){
+          const prof=getProfile();
+          if(urlCode!==prof.code){
+            friends.push({
+              code:urlCode.toUpperCase(),
+              name:decodeURIComponent(urlName),
+              ava:decodeURIComponent(urlAva||'🎵'),
+              avaPhoto:'',
+              bio:decodeURIComponent(urlBio||''),
+              posts:[],
+              addedAt:new Date().toISOString()
+            });
+            saveFriends(friends);
+            go('home');
+            toast(`✅ ${decodeURIComponent(urlName)} とフレンドになりました！`);
+            renderHome();
+            return;
+          }
+        }
       }
-    });
-  }
-
-  // My latest post
-  const myPostSec = document.getElementById('my-post-sec');
-  if (myPosts.length > 0) {
-    myPostSec.style.display = 'block';
-    const p = myPosts[0];
-    document.getElementById('my-latest-post').innerHTML = `
-      <div class="card feed-card" onclick="openMD({a:'${prof.ava}',n:'${esc(prof.name)}（自分）',d:'',e:'${esc(p.emo)}',s:'${esc(p.song)}',ar:'${esc(p.artist)}',c:'${esc(p.comment||'')}',v:'${p.vid||''}',th:'${p.thumb||''}'})">
-        <div class="ava" style="width:40px;height:40px;font-size:18px;">${prof.ava}</div>
-        <div class="fi">
-          <div class="fi-meta">自分 · ${relTime(p.time)}</div>
-          <div class="fi-song">${esc(p.song)}</div>
-          <div class="fi-art">${esc(p.artist)}</div>
-        </div>
-        <div class="fi-r">
-          <div class="chip-emo">${esc(p.emo)}</div>
-          <div class="fi-time">${fmtTime(p.time)}</div>
-        </div>
-      </div>`;
-  } else {
-    myPostSec.style.display = 'none';
+      go('profile');
+      toast('招待コードを検出！「追加」をタップしてね');
+    },600);
   }
 }
 
-// ──────────────────────────────────────────────
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function go(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById('scr-'+id)?.classList.add('on');
+  if(id==='home')renderHome();
+  if(id==='profile')renderProfile();
+  if(id==='match')renderMatch();
+  if(id==='settings')openSettings();
+}
+
+// ═══════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════
+function startClock(){
+  function tick(){
+    const now=new Date();
+    const t=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    ['sb-time','sb-time-m','sb-time-e','sb-time-p','sb-time-pr'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.textContent=t;
+    });
+  }
+  tick();setInterval(tick,10000);
+}
+
+// ═══════════════════════════════════════════
+// LOCATION
+// ═══════════════════════════════════════════
+function startLocation(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const{latitude:lat,longitude:lon}=pos.coords;
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ja`)
+      .then(r=>r.json()).then(d=>{
+        const ward=d.address?.city_district||d.address?.suburb||d.address?.city||d.address?.town||'';
+        const loc=ward||'現在地';
+        document.getElementById('sb-loc').textContent=`📍 ${loc}`;
+        const prof=getProfile();prof.location=loc;saveProfile(prof);
+      }).catch(()=>{});
+  },()=>{});
+}
+
+// ═══════════════════════════════════════════
+// ONBOARDING
+// ═══════════════════════════════════════════
+function handlePhotoOb(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    _obAvaType='photo';_obAvaPhoto=e.target.result;
+    const area=document.getElementById('ob-ava-area');
+    area.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+    document.querySelectorAll('#ob-ava-row .ava-opt').forEach(x=>x.classList.remove('on'));
+  };
+  reader.readAsDataURL(file);
+}
+
+function pickAvaEmoji(el,emo){
+  document.querySelectorAll('#ob-ava-row .ava-opt').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  _obAvaType='emoji';_obAvaVal=emo;_obAvaPhoto='';
+  // reset photo area
+  document.getElementById('ob-ava-area').innerHTML=`<div class="ava-placeholder" id="ob-ava-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#44464d" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>写真を選ぶ</span></div>`;
+}
+
+function obNext1(){
+  const name=document.getElementById('ob-name').value.trim();
+  if(!name){toast('ニックネームを入力してください');return;}
+  const bio=document.getElementById('ob-bio').value.trim();
+  const prof=getProfile();
+  prof.name=name;prof.bio=bio;
+  if(_obAvaType==='photo'){prof.avaPhoto=_obAvaPhoto;prof.ava='📷';}
+  else{prof.ava=_obAvaVal;prof.avaPhoto='';}
+  if(!prof.code)prof.code=genCode();
+  saveProfile(prof);
+  document.getElementById('ob-s1').style.display='none';
+  document.getElementById('ob-s2').style.display='block';
+  document.getElementById('dot2').classList.add('on');
+  document.getElementById('my-code').textContent=prof.code;
+}
+
+function obNext2(){
+  document.getElementById('ob-s2').style.display='none';
+  document.getElementById('ob-s3').style.display='block';
+  document.getElementById('dot3').classList.add('on');
+}
+
+function obFinish(){
+  const prof=getProfile();prof.setupDone=true;saveProfile(prof);startApp();
+}
+
+// ═══════════════════════════════════════════
+// FRIEND CODE — KEY FIX: URL encodes full profile
+// ═══════════════════════════════════════════
+function shareCode(){
+  const prof=getProfile();
+  const base=`${location.origin}${location.pathname}`;
+  const url=`${base}?invite=${prof.code}&n=${encodeURIComponent(prof.name)}&a=${encodeURIComponent(prof.ava)}&b=${encodeURIComponent(prof.bio||'')}`;
+  const msg=`hearmeで繋がろう！\n招待コード: ${prof.code}\n👇このリンクから追加してね\n${url}`;
+  if(navigator.share){navigator.share({title:'hearme 招待',text:msg,url}).catch(()=>{});}
+  else{navigator.clipboard?.writeText(msg).then(()=>toast('招待リンクをコピーしました！')).catch(()=>toast('コピー失敗：'+msg));}
+}
+
+function copyCode(){
+  const prof=getProfile();
+  const base=`${location.origin}${location.pathname}`;
+  const url=`${base}?invite=${prof.code}&n=${encodeURIComponent(prof.name)}&a=${encodeURIComponent(prof.ava)}&b=${encodeURIComponent(prof.bio||'')}`;
+  navigator.clipboard?.writeText(url).then(()=>toast('招待リンクをコピーしました！')).catch(()=>toast(`コード: ${prof.code}`));
+}
+
+function addFriendByCode(){
+  const code=document.getElementById('fr-code-in').value.trim().toUpperCase();
+  _addFriend(code,()=>{document.getElementById('fr-code-in').value='';});
+}
+
+function addFriendByCodeProf(){
+  const code=document.getElementById('fr-code-prof').value.trim().toUpperCase();
+  _addFriend(code,()=>{document.getElementById('fr-code-prof').value='';renderProfile();});
+}
+
+function _addFriend(code,cb){
+  if(!code||code.length!==6){toast('6文字のコードを入力してください');return;}
+  const prof=getProfile();
+  if(code===prof.code){toast('自分のコードは追加できません');return;}
+  const friends=getFriends();
+  if(friends.find(f=>f.code===code)){toast('すでに追加済みのフレンドです');return;}
+  friends.push({code,name:`フレンド (${code})`,ava:'🎵',avaPhoto:'',bio:'',posts:[],addedAt:new Date().toISOString()});
+  saveFriends(friends);
+  toast(`✅ フレンドを追加しました！相手がリンクから追加すると名前が更新されます`);
+  if(cb)cb();
+}
+
+function removeFriend(code){
+  if(!confirm('このフレンドを削除しますか？'))return;
+  saveFriends(getFriends().filter(f=>f.code!==code));
+  renderProfile();toast('フレンドを削除しました');
+}
+
+// ═══════════════════════════════════════════
+// HOME RENDER
+// ═══════════════════════════════════════════
+function renderHome(){
+  const prof=getProfile();
+  const friends=getFriends();
+  const myPosts=getMyPosts();
+  const hva=document.getElementById('hm-ava');
+  renderAva(hva,prof.avaPhoto,prof.ava,32);
+
+  // Streak banner
+  const streak=calcStreak(myPosts);
+  const sb=document.getElementById('streak-bar-wrap');
+  if(streak>=2){
+    sb.innerHTML=`<div class="streak-bar"><div class="streak-num">🔥${streak}</div><div><div class="streak-lbl">日連続投稿中！</div><div class="streak-sub">今日も投稿してキープしよう</div></div></div>`;
+  } else {sb.innerHTML='';}
+
+  const hasFriends=friends.length>0;
+  document.getElementById('lock-wall').style.display=hasFriends?'none':'block';
+  document.getElementById('friend-feed').style.display=hasFriends?'block':'none';
+
+  if(hasFriends){
+    document.getElementById('friend-count').textContent=`${friends.length}人`;
+    const feedList=document.getElementById('feed-list');feedList.innerHTML='';
+    friends.forEach(fr=>{
+      const posts=fr.posts||[];
+      const el=document.createElement('div');
+      el.className='card feed-card';
+      const frAvaEl=`<div class="ava" style="width:40px;height:40px;font-size:18px;overflow:hidden;">${fr.avaPhoto?`<img src="${fr.avaPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`:(fr.ava||'🎵')}</div>`;
+      if(posts.length===0){
+        el.style.opacity='.55';
+        el.innerHTML=`${frAvaEl}<div class="fi"><div class="fi-meta">${esc(fr.name)}</div><div class="fi-song" style="color:var(--tx3);">まだ投稿していません</div></div><div class="fi-r"><span style="font-size:18px;">🔒</span></div>`;
+      } else {
+        const p=posts[0];
+        el.onclick=()=>openMD({avaPhoto:fr.avaPhoto,a:fr.ava,n:fr.name,e:p.emo,s:p.song,ar:p.artist,c:p.comment||'',v:p.vid,th:p.thumb});
+        el.innerHTML=`${frAvaEl}<div class="fi"><div class="fi-meta">${esc(fr.name)} · ${relTime(p.time)}</div><div class="fi-song">${esc(p.song)}</div><div class="fi-art">${esc(p.artist)}</div></div><div class="fi-r"><div class="chip-emo">${esc(p.emo)}</div><div class="fi-time">${fmtTime(p.time)}</div></div>`;
+      }
+      feedList.appendChild(el);
+    });
+  }
+
+  const myPostSec=document.getElementById('my-post-sec');
+  if(myPosts.length>0){
+    myPostSec.style.display='block';
+    const p=myPosts[0];
+    const myAvaHtml=prof.avaPhoto?`<img src="${prof.avaPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`:(prof.ava||'🎧');
+    document.getElementById('my-latest-post').innerHTML=`
+      <div class="card feed-card" onclick="openMD({avaPhoto:'${prof.avaPhoto||''}',a:'${esc(prof.ava)}',n:'${esc(prof.name)}（自分）',e:'${esc(p.emo)}',s:'${esc(p.song)}',ar:'${esc(p.artist)}',c:'${esc(p.comment||'')}',v:'${p.vid||''}',th:'${p.thumb||''}'})">
+        <div class="ava" style="width:40px;height:40px;font-size:18px;overflow:hidden;">${myAvaHtml}</div>
+        <div class="fi"><div class="fi-meta">自分 · ${relTime(p.time)}</div><div class="fi-song">${esc(p.song)}</div><div class="fi-art">${esc(p.artist)}</div></div>
+        <div class="fi-r"><div class="chip-emo">${esc(p.emo)}</div><div class="fi-time">${fmtTime(p.time)}</div></div>
+      </div>`;
+  } else {myPostSec.style.display='none';}
+
+  checkNotifBar();
+}
+
+// ═══════════════════════════════════════════
+// STREAK CALC
+// ═══════════════════════════════════════════
+function calcStreak(posts){
+  if(!posts||posts.length===0)return 0;
+  const days=new Set(posts.map(p=>p.time?new Date(p.time).toDateString():''));
+  const today=new Date();let streak=0;
+  for(let i=0;i<60;i++){
+    const d=new Date(today);d.setDate(today.getDate()-i);
+    if(days.has(d.toDateString()))streak++;
+    else if(i>0)break;
+  }
+  return streak;
+}
+
+// ═══════════════════════════════════════════
 // PROFILE RENDER
-// ──────────────────────────────────────────────
-function renderProfile() {
-  const prof = getProfile();
-  const friends = getFriends();
-  const myPosts = getMyPosts();
+// ═══════════════════════════════════════════
+function renderProfile(){
+  const prof=getProfile();const friends=getFriends();const myPosts=getMyPosts();
+  const pava=document.getElementById('prof-ava-disp');
+  renderAva(pava,prof.avaPhoto,prof.ava,64);
+  document.getElementById('prof-name-disp').textContent=prof.name||'—';
+  document.getElementById('prof-bio-disp').textContent=prof.bio||'';
+  document.getElementById('prof-code-disp').textContent=`CODE: ${prof.code||'------'}`;
+  document.getElementById('prof-code-big').textContent=prof.code||'------';
+  document.getElementById('stat-posts').textContent=myPosts.length;
+  document.getElementById('stat-friends').textContent=friends.length;
+  document.getElementById('stat-streak').textContent=calcStreak(myPosts);
 
-  document.getElementById('prof-ava-disp').textContent = prof.ava || '🎧';
-  document.getElementById('prof-name-disp').textContent = prof.name || '—';
-  document.getElementById('prof-handle-disp').textContent = prof.location ? `📍 ${prof.location}` : 'hearme ユーザー';
-  document.getElementById('prof-code-disp').textContent = `CODE: ${prof.code || '------'}`;
-  document.getElementById('prof-code-big').textContent = prof.code || '------';
-  document.getElementById('stat-posts').textContent = myPosts.length;
-  document.getElementById('stat-friends').textContent = friends.length;
+  // Mood graph (real data)
+  renderMoodGraph(myPosts);
 
-  // Friends list
-  const fl = document.getElementById('friends-list-disp');
-  fl.innerHTML = '';
-  if (friends.length === 0) {
-    fl.innerHTML = '<div style="font-size:12px;color:var(--tx3);padding:12px 0;">まだフレンドがいません。上のコードを友達と交換しよう！</div>';
+  // Friends
+  const fl=document.getElementById('friends-list-disp');fl.innerHTML='';
+  if(friends.length===0){
+    fl.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:12px 0;">まだフレンドがいません。上のコードを友達に送ろう！</div>';
   } else {
-    friends.forEach(fr => {
-      const latestPost = (fr.posts || [])[0];
-      const row = document.createElement('div');
-      row.className = 'friend-row';
-      row.innerHTML = `
-        <div class="ava" style="width:38px;height:38px;font-size:18px;">${esc(fr.ava)}</div>
+    friends.forEach(fr=>{
+      const latestPost=(fr.posts||[])[0];
+      const row=document.createElement('div');row.className='friend-row';
+      const frAva=fr.avaPhoto?`<img src="${fr.avaPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`:(fr.ava||'🎵');
+      row.innerHTML=`
+        <div class="ava" style="width:38px;height:38px;font-size:18px;overflow:hidden;">${frAva}</div>
         <div class="fr-info">
           <div class="fr-name">${esc(fr.name)}</div>
-          ${latestPost
-            ? `<div class="fr-song">${esc(latestPost.song)} · ${esc(latestPost.emo)}</div>`
-            : `<div class="fr-locked">まだ投稿していません 🔒</div>`}
+          ${latestPost?`<div class="fr-song">${esc(latestPost.song)} ${esc(latestPost.emo)}</div>`:`<div class="fr-locked">まだ投稿していません 🔒</div>`}
         </div>
         <button class="btn-g" style="height:28px;padding:0 9px;font-size:10px;border-radius:8px;color:var(--rs);" onclick="removeFriend('${esc(fr.code)}')">削除</button>`;
       fl.appendChild(row);
     });
   }
 
-  // My post history
-  const hl = document.getElementById('my-history-list');
-  hl.innerHTML = '';
-  if (myPosts.length === 0) {
-    hl.innerHTML = '<div class="empty-state"><div class="em">🎵</div>まだ投稿がありません</div>';
+  // My history
+  const hl=document.getElementById('my-history-list');hl.innerHTML='';
+  if(myPosts.length===0){
+    hl.innerHTML='<div class="empty-state"><div class="em">🎵</div>まだ投稿がありません</div>';
   } else {
-    myPosts.slice(0, 20).forEach(p => {
-      const el = document.createElement('div');
-      el.className = 'card hs-card';
-      el.innerHTML = `
-        <div class="hs-th">${p.thumb ? `<img src="${esc(p.thumb)}" onerror="this.parentElement.textContent='🎵'" alt=""/>` : '🎵'}</div>
-        <div class="hs-info">
-          <div class="hs-song">${esc(p.song)}</div>
-          <div class="hs-art">${esc(p.artist)}</div>
-        </div>
-        <div class="hs-r">
-          <div class="hs-em">${esc(p.emo.split(' ')[0])}</div>
-          <div class="hs-t">${fmtTime(p.time)}</div>
-        </div>`;
+    myPosts.slice(0,30).forEach(p=>{
+      const el=document.createElement('div');el.className='card hs-card';
+      el.onclick=()=>openMD({a:prof.ava,n:prof.name,e:p.emo,s:p.song,ar:p.artist,c:p.comment||'',v:p.vid,th:p.thumb});
+      el.innerHTML=`
+        <div class="hs-th">${p.thumb?`<img src="${esc(p.thumb)}" onerror="this.parentElement.textContent='🎵'" alt=""/>`:'🎵'}</div>
+        <div class="hs-info"><div class="hs-song">${esc(p.song)}</div><div class="hs-art">${esc(p.artist)}</div></div>
+        <div class="hs-r"><div class="hs-em">${esc((p.emo||'').split(' ')[0])}</div><div class="hs-t">${fmtTime(p.time)}</div></div>`;
       hl.appendChild(el);
     });
   }
 }
 
-// ──────────────────────────────────────────────
+// ═══════════════════════════════════════════
+// MOOD GRAPH (real data)
+// ═══════════════════════════════════════════
+const EMO_COLORS={'😊':'#ffb240','😢':'#5b8cff','😌':'#43cfc6','🥺':'#a78bfa','😤':'#ff6585','🤩':'#ffb240','😴':'#83868f','😶':'#44464d','🔥':'#ff6585','💭':'#43cfc6'};
+function renderMoodGraph(posts){
+  const wrap=document.getElementById('mood-graph-wrap');
+  const bars=document.getElementById('mood-graph-bars');
+  if(!posts||posts.length===0){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  bars.innerHTML='';
+  const days=['月','火','水','木','金','土','日'];
+  const today=new Date();
+  for(let i=6;i>=0;i--){
+    const d=new Date(today);d.setDate(today.getDate()-i);
+    const ds=d.toDateString();
+    const dayPosts=posts.filter(p=>p.time&&new Date(p.time).toDateString()===ds);
+    const col=document.createElement('div');col.className='mg-col';
+    const pct=dayPosts.length>0?Math.min(100,dayPosts.length*50)+'%':'4px';
+    const firstEmo=dayPosts[0]?.emo?.split(' ')[0]||'';
+    const color=EMO_COLORS[firstEmo]||'#e8e3d7';
+    col.innerHTML=`${firstEmo?`<div class="mg-emo">${firstEmo}</div>`:''}<div class="mg-bar" style="height:${pct};background:${color};opacity:${dayPosts.length?1:.18};"></div><div class="mg-day">${days[d.getDay()==0?6:d.getDay()-1]}</div>`;
+    bars.appendChild(col);
+  }
+}
+
+// ═══════════════════════════════════════════
 // MATCH RENDER
-// ──────────────────────────────────────────────
-function renderMatch() {
-  const friends = getFriends();
-  const myPosts = getMyPosts();
+// ═══════════════════════════════════════════
+function renderMatch(){
+  const friends=getFriends();const myPosts=getMyPosts();const prof=getProfile();
+  const allPosts=[];
+  friends.forEach(fr=>(fr.posts||[]).forEach(p=>allPosts.push({...p,frName:fr.name,frAva:fr.ava,frAvaPhoto:fr.avaPhoto||''})));
+  myPosts.forEach(p=>allPosts.push({...p,frName:prof.name+'（自分）',frAva:prof.ava,frAvaPhoto:prof.avaPhoto||''}));
 
-  // Aggregate all posts
-  const allPosts = [];
-  friends.forEach(fr => {
-    (fr.posts || []).forEach(p => allPosts.push({ ...p, frName: fr.name, frAva: fr.ava }));
+  // Song match
+  const songMap={};
+  allPosts.forEach(p=>{
+    if(!songMap[p.song])songMap[p.song]={song:p.song,artist:p.artist,vid:p.vid,thumb:p.thumb,users:[]};
+    songMap[p.song].users.push(p);
   });
-  myPosts.forEach(p => {
-    const prof = getProfile();
-    allPosts.push({ ...p, frName: prof.name + '（自分）', frAva: prof.ava });
+  const sl=document.getElementById('match-song-list');sl.innerHTML='';
+  const groups=Object.values(songMap).filter(g=>g.users.length>=2);
+  if(!groups.length){sl.innerHTML='<div class="empty-state"><div class="em">🎵</div>まだ共通の曲がありません<br>フレンドと曲が被ると表示されます</div>';}
+  else groups.sort((a,b)=>b.users.length-a.users.length).forEach(g=>{
+    const el=document.createElement('div');el.className='card sm-card';
+    el.onclick=()=>openMD({a:g.users[0].frAva,n:g.users[0].frName,e:g.users[0].emo,s:g.song,ar:g.artist,c:g.users[0].comment||'',v:g.vid,th:g.thumb});
+    const pills=g.users.slice(0,3).map(u=>`<div class="up"><div class="ava" style="width:19px;height:19px;font-size:9px;">${u.frAvaPhoto?`<img src="${u.frAvaPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`:(u.frAva||'🎵')}</div><div class="up-nm">${esc(u.frName)}</div></div>`).join('');
+    el.innerHTML=`<div class="sm-top"><div class="sm-cov">${g.thumb?`<img src="${esc(g.thumb)}" onerror="this.style.display='none'" alt=""/>`:'🎵'}</div><div style="flex:1;"><div class="sm-song">${esc(g.song)}</div><div class="sm-art">${esc(g.artist)}</div></div><div class="sm-badge">${g.users.length}人</div></div><div class="sm-pills">${pills}</div>`;
+    sl.appendChild(el);
   });
 
-  // Song match: group by song
-  const songMap = {};
-  allPosts.forEach(p => {
-    const key = p.song;
-    if (!songMap[key]) songMap[key] = { song: p.song, artist: p.artist, vid: p.vid, thumb: p.thumb, users: [] };
-    songMap[key].users.push(p);
-  });
-
-  const songList = document.getElementById('match-song-list');
-  songList.innerHTML = '';
-  const groups = Object.values(songMap).filter(g => g.users.length >= 2);
-  if (groups.length === 0) {
-    songList.innerHTML = '<div class="empty-state"><div class="em">🎵</div>まだ共通の曲がありません<br>フレンドが増えると表示されます</div>';
-  } else {
-    groups.sort((a, b) => b.users.length - a.users.length).forEach(g => {
-      const el = document.createElement('div');
-      el.className = 'card sm-card';
-      el.onclick = () => openMD({ a: g.users[0].frAva, n: g.users[0].frName, d: '', e: g.users[0].emo, s: g.song, ar: g.artist, c: g.users[0].comment || '—', v: g.vid, th: g.thumb });
-      const pills = g.users.slice(0, 3).map(u => `<div class="up"><div class="ava" style="width:19px;height:19px;font-size:9px;">${esc(u.frAva)}</div><div class="up-nm">${esc(u.frName)}</div></div>`).join('');
-      el.innerHTML = `
-        <div class="sm-top">
-          <div class="sm-cov">${g.thumb ? `<img src="${esc(g.thumb)}" onerror="this.style.display='none'" alt=""/>` : ''}</div>
-          <div style="flex:1;"><div class="sm-song">${esc(g.song)}</div><div class="sm-art">${esc(g.artist)}</div></div>
-          <div class="sm-badge">${g.users.length}人</div>
-        </div>
-        <div class="sm-pills">${pills}</div>`;
-      songList.appendChild(el);
+  // Feel match
+  const feelMap={};
+  allPosts.forEach(p=>{if(!feelMap[p.emo])feelMap[p.emo]=[];feelMap[p.emo].push(p);});
+  const fl=document.getElementById('match-feel-list');fl.innerHTML='';
+  if(!Object.keys(feelMap).length){fl.innerHTML='<div class="empty-state"><div class="em">💭</div>まだデータがありません</div>';}
+  else Object.entries(feelMap).forEach(([emo,users])=>{
+    const hd=document.createElement('div');hd.className='fm-hd';
+    hd.innerHTML=`<span style="font-size:20px;">${esc(emo.split(' ')[0])}</span><div><div class="syne" style="font-size:13px;font-weight:700;">${esc(emo)}</div><div style="font-size:10px;color:var(--tx2);">${users.length}人</div></div>`;
+    fl.appendChild(hd);
+    const scroll=document.createElement('div');scroll.className='fm-scroll';
+    users.forEach(u=>{
+      const c=document.createElement('div');c.className='card fm-card';
+      c.onclick=()=>openMD({a:u.frAva,n:u.frName,e:u.emo,s:u.song,ar:u.artist,c:u.comment||'',v:u.vid,th:u.thumb});
+      c.innerHTML=`<div class="ava" style="width:36px;height:36px;font-size:16px;margin-bottom:7px;overflow:hidden;">${u.frAvaPhoto?`<img src="${u.frAvaPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`:(u.frAva||'🎵')}</div><div style="font-size:11px;font-weight:500;">${esc(u.frName)}</div><div style="font-size:10px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(u.song)}</div>`;
+      scroll.appendChild(c);
     });
-  }
-
-  // Feel match: group by emotion
-  const feelMap = {};
-  allPosts.forEach(p => {
-    if (!feelMap[p.emo]) feelMap[p.emo] = [];
-    feelMap[p.emo].push(p);
+    fl.appendChild(scroll);
   });
-  const feelList = document.getElementById('match-feel-list');
-  feelList.innerHTML = '';
-  if (Object.keys(feelMap).length === 0) {
-    feelList.innerHTML = '<div class="empty-state"><div class="em">💭</div>まだデータがありません</div>';
-  } else {
-    Object.entries(feelMap).forEach(([emo, users]) => {
-      const hd = document.createElement('div');
-      hd.className = 'fm-hd';
-      hd.innerHTML = `<span style="font-size:20px;">${esc(emo.split(' ')[0])}</span><div><div class="syne" style="font-size:13px;font-weight:700;">${esc(emo)}</div><div style="font-size:10px;color:var(--tx2);">${users.length}人</div></div>`;
-      feelList.appendChild(hd);
-      const scroll = document.createElement('div');
-      scroll.className = 'fm-scroll';
-      users.forEach(u => {
-        const c = document.createElement('div');
-        c.className = 'card fm-card';
-        c.onclick = () => openMD({ a: u.frAva, n: u.frName, d: '', e: u.emo, s: u.song, ar: u.artist, c: u.comment || '—', v: u.vid, th: u.thumb });
-        c.innerHTML = `<div class="ava" style="width:40px;height:40px;font-size:18px;margin-bottom:8px;">${esc(u.frAva)}</div><div style="font-size:12px;font-weight:500;">${esc(u.frName)}</div><div style="font-size:10px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(u.song)}</div>`;
-        scroll.appendChild(c);
-      });
-      feelList.appendChild(scroll);
-    });
-  }
 }
 
-// ──────────────────────────────────────────────
-// MATCH TABS
-// ──────────────────────────────────────────────
-function mTab(t) {
-  document.getElementById('mt-s').classList.toggle('on', t === 's');
-  document.getElementById('mt-f').classList.toggle('on', t === 'f');
-  document.getElementById('mp-s').style.display = t === 's' ? 'block' : 'none';
-  document.getElementById('mp-f').style.display = t === 'f' ? 'block' : 'none';
+function mTab(t){
+  document.getElementById('mt-s').classList.toggle('on',t==='s');
+  document.getElementById('mt-f').classList.toggle('on',t==='f');
+  document.getElementById('mp-s').style.display=t==='s'?'block':'none';
+  document.getElementById('mp-f').style.display=t==='f'?'block':'none';
 }
 
-// ──────────────────────────────────────────────
+// ═══════════════════════════════════════════
 // SETTINGS
-// ──────────────────────────────────────────────
-function openSettings() {
-  const prof = getProfile();
-  document.getElementById('set-name').value = prof.name || '';
-  _setAva = prof.ava || '🎧';
-  document.querySelectorAll('#set-ava-row .ava-opt').forEach(el => {
-    el.classList.toggle('on', el.textContent === _setAva);
-  });
-}
-
-function pickAvaSet(el, emo) {
-  document.querySelectorAll('#set-ava-row .ava-opt').forEach(x => x.classList.remove('on'));
-  el.classList.add('on');
-  _setAva = emo;
-}
-
-function saveSettings() {
-  const name = document.getElementById('set-name').value.trim();
-  if (!name) { toast('ニックネームを入力してください'); return; }
-  const prof = getProfile();
-  prof.name = name;
-  prof.ava = _setAva;
-  saveProfile(prof);
-  go('profile');
-  toast('✅ 保存しました！');
-}
-
-function confirmReset() {
-  if (confirm('本当にすべてのデータをリセットしますか？この操作は取り消せません。')) {
-    localStorage.clear();
-    location.reload();
-  }
-}
-
-// ──────────────────────────────────────────────
-// NOTIFICATION
-// ──────────────────────────────────────────────
-function checkNotifBar() {
-  if ('Notification' in window && Notification.permission !== 'granted') {
-    document.getElementById('notif-bar').style.display = 'flex';
-  }
-}
-
-async function reqNotif() {
-  if (!('Notification' in window)) { toast('このブラウザは通知未対応です'); return; }
-  const p = await Notification.requestPermission();
-  if (p === 'granted') {
-    document.getElementById('notif-bar').style.display = 'none';
-    toast('🔔 通知をONにしました！');
+// ═══════════════════════════════════════════
+function openSettings(){
+  const prof=getProfile();
+  document.getElementById('set-name').value=prof.name||'';
+  document.getElementById('set-bio').value=prof.bio||'';
+  _setAvaVal=prof.ava||'🎧';_setAvaPhoto=prof.avaPhoto||'';
+  const area=document.getElementById('set-ava-area');
+  if(prof.avaPhoto){
+    area.innerHTML=`<img src="${prof.avaPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
   } else {
-    toast('設定から通知を許可してください');
+    area.innerHTML=`<div class="ava-placeholder" id="set-ava-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#44464d" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>写真を変更</span></div>`;
+  }
+  document.querySelectorAll('#set-ava-row .ava-opt').forEach(el=>el.classList.toggle('on',el.textContent===_setAvaVal&&!_setAvaPhoto));
+}
+
+function handlePhotoSet(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    _setAvaType='photo';_setAvaPhoto=e.target.result;
+    const area=document.getElementById('set-ava-area');
+    area.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+    document.querySelectorAll('#set-ava-row .ava-opt').forEach(x=>x.classList.remove('on'));
+  };
+  reader.readAsDataURL(file);
+}
+
+function pickAvaSet(el,emo){
+  document.querySelectorAll('#set-ava-row .ava-opt').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  _setAvaVal=emo;_setAvaPhoto='';_setAvaType='emoji';
+  const area=document.getElementById('set-ava-area');
+  area.innerHTML=`<div class="ava-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#44464d" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>写真を変更</span></div>`;
+}
+
+function saveSettings(){
+  const name=document.getElementById('set-name').value.trim();
+  if(!name){toast('ニックネームを入力してください');return;}
+  const prof=getProfile();
+  prof.name=name;prof.bio=document.getElementById('set-bio').value.trim();
+  if(_setAvaPhoto){prof.avaPhoto=_setAvaPhoto;prof.ava='📷';}
+  else{prof.ava=_setAvaVal;prof.avaPhoto='';}
+  saveProfile(prof);go('profile');toast('✅ 保存しました！');
+}
+
+function confirmReset(){
+  if(confirm('本当にすべてのデータをリセットしますか？')){{localStorage.clear();location.reload();}}
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATION — 1日1回に制限
+// ═══════════════════════════════════════════
+function checkNotifBar(){
+  if('Notification' in window&&Notification.permission!=='granted'){
+    document.getElementById('notif-bar').style.display='flex';
   }
 }
 
-// ──────────────────────────────────────────────
-// BEREAL
-// ──────────────────────────────────────────────
-window.triggerBereal = function() {
-  _brSec = 180;
+async function reqNotif(){
+  if(!('Notification' in window)){toast('このブラウザは通知未対応です');return;}
+  const p=await Notification.requestPermission();
+  if(p==='granted'){document.getElementById('notif-bar').style.display='none';toast('🔔 通知をONにしました！');}
+  else{toast('設定から通知を許可してください');}
+}
+
+// 1日1回だけBerealを発火するスケジューラ
+function scheduleBereal(){
+  const today=new Date().toDateString();
+  const lastFired=localStorage.getItem('hm_bereal_last');
+  if(lastFired===today)return; // 今日はもう発火済み
+
+  // ランダムな時間（起動から30秒〜3分後）
+  const delay=30000+Math.random()*150000;
+  setTimeout(()=>{
+    if(!document.getElementById('bereal-ov').classList.contains('show')){
+      localStorage.setItem('hm_bereal_last',today);
+      triggerBereal();
+    }
+  },delay);
+}
+
+window.triggerBereal=function(){
+  _brSec=180;
   document.getElementById('bereal-ov').classList.add('show');
   updBr();
-  _brInt = setInterval(() => {
-    _brSec--;
-    updBr();
-    if (_brSec <= 0) {
-      clearInterval(_brInt);
-      document.getElementById('bereal-ov').classList.remove('show');
-      toast('時間切れ…遅れた投稿として残ります');
-    }
-  }, 1000);
-  if ('Notification' in window && Notification.permission === 'granted') {
-    try { new Notification('hearme 🎵', { body: '今の気持ちの曲は？', tag: 'hm' }); } catch(e){}
+  _brInt=setInterval(()=>{
+    _brSec--;updBr();
+    if(_brSec<=0){clearInterval(_brInt);document.getElementById('bereal-ov').classList.remove('show');toast('時間切れ…遅れた投稿として残ります');}
+  },1000);
+  if('Notification' in window&&Notification.permission==='granted'){
+    try{new Notification('hearme 🎵',{body:'今の気持ちの曲は？',tag:'hm'});}catch(e){}
   }
 };
 
-function updBr() {
-  const m = String(Math.floor(_brSec / 60)).padStart(2, '0');
-  const s = String(_brSec % 60).padStart(2, '0');
-  document.getElementById('br-t').textContent = `${m}:${s}`;
+function updBr(){
+  document.getElementById('br-t').textContent=`${String(Math.floor(_brSec/60)).padStart(2,'0')}:${String(_brSec%60).padStart(2,'0')}`;
 }
 
-function openPostBereal() {
-  clearInterval(_brInt);
-  document.getElementById('bereal-ov').classList.remove('show');
-  _fromBr = true;
-  document.getElementById('pt-br').style.display = 'flex';
-  go('post');
-}
+function openPostBereal(){clearInterval(_brInt);document.getElementById('bereal-ov').classList.remove('show');_fromBr=true;document.getElementById('pt-br').style.display='flex';go('post');}
+function skipBereal(){clearInterval(_brInt);document.getElementById('bereal-ov').classList.remove('show');toast('遅れた投稿として記録されます');}
 
-function skipBereal() {
-  clearInterval(_brInt);
-  document.getElementById('bereal-ov').classList.remove('show');
-  toast('遅れた投稿として記録されます');
-}
-
-// ──────────────────────────────────────────────
+// ═══════════════════════════════════════════
 // MATCH DETAIL MODAL
-// ──────────────────────────────────────────────
-function openMD(d) {
-  document.getElementById('md-a').textContent = d.a;
-  document.getElementById('md-n').textContent = d.n;
-  document.getElementById('md-e').textContent = d.e;
-  document.getElementById('md-d').textContent = d.d || '';
-  document.getElementById('md-s').textContent = d.s;
-  document.getElementById('md-ar').textContent = d.ar;
-  document.getElementById('md-c').textContent = d.c ? `「${d.c}」` : '—';
-  _mdVid = d.v || '';
-  const th = document.getElementById('md-th');
-  th.innerHTML = d.th
-    ? `<img src="${d.th}" style="width:100%;height:100%;object-fit:cover;" onerror="this.remove()"/>`
-    : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".25"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
-  _mdPlay = false;
-  document.getElementById('md-pi').classList.remove('v');
-  document.getElementById('md-ico').style.display = 'block';
-  document.getElementById('md-lbl').textContent = 'YouTubeで開く';
-  document.querySelectorAll('.rb').forEach(b => b.classList.remove('on'));
+// ═══════════════════════════════════════════
+function openMD(d){
+  const avaEl=document.getElementById('md-a');
+  if(d.avaPhoto){avaEl.innerHTML=`<img src="${d.avaPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;}
+  else{avaEl.textContent=d.a||'🎵';}
+  document.getElementById('md-n').textContent=d.n||'—';
+  document.getElementById('md-e').textContent=d.e||'';
+  document.getElementById('md-s').textContent=d.s||'—';
+  document.getElementById('md-ar').textContent=d.ar||'';
+  document.getElementById('md-c').textContent=d.c?`「${d.c}」`:'—';
+  _mdVid=d.v||'';
+  const th=document.getElementById('md-th');
+  th.innerHTML=d.th?`<img src="${d.th}" style="width:100%;height:100%;object-fit:cover;" onerror="this.remove()"/>`:`<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".25"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+  document.querySelectorAll('.rb').forEach(b=>b.classList.remove('on'));
   document.getElementById('md-bg').classList.add('on');
 }
 
-function closeMD(e) {
-  if (e.target === document.getElementById('md-bg')) document.getElementById('md-bg').classList.remove('on');
+function closeMD(e){if(e.target===document.getElementById('md-bg'))document.getElementById('md-bg').classList.remove('on');}
+
+function mdPlay(){
+  if(_mdVid){window.open(`https://www.youtube.com/watch?v=${_mdVid}`,'_blank');}
+  else{toast('YouTubeリンクがありません');}
 }
 
-function mdPlay() {
-  if (_mdVid) {
-    window.open(`https://www.youtube.com/watch?v=${_mdVid}`, '_blank');
-  } else {
-    toast('YouTubeリンクがありません');
-  }
+function doR(btn,emoji){
+  document.querySelectorAll('.rb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');toast(`${emoji} リアクションしました！`);
 }
 
-function doR(btn, emoji) {
-  document.querySelectorAll('.rb').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  toast(`${emoji} リアクションを送りました`);
-}
-
-// ──────────────────────────────────────────────
+// ═══════════════════════════════════════════
 // EVENTS
-// ──────────────────────────────────────────────
-function evJoin(btn) {
-  const j = btn.classList.contains('joined');
-  btn.classList.toggle('joined', !j);
-  btn.textContent = j ? '参加する' : '参加済み ✓';
-  if (!j) toast('イベントに参加しました 🎉');
-}
-function evChip(c) {
-  document.querySelectorAll('.ev-chip').forEach(x => x.classList.remove('on'));
-  c.classList.add('on');
+// ═══════════════════════════════════════════
+function evJoin(btn){const j=btn.classList.contains('joined');btn.classList.toggle('joined',!j);btn.textContent=j?'参加する':'参加済み ✓';if(!j)toast('イベントに参加しました 🎉');}
+function evChip(c){document.querySelectorAll('.ev-chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');}
+
+// ═══════════════════════════════════════════
+// POST — YouTube URL parse + search
+// ═══════════════════════════════════════════
+function extractYtId(url){
+  const patterns=[
+    /[?&]v=([^&#]+)/,
+    /youtu\.be\/([^?&#]+)/,
+    /youtube\.com\/embed\/([^?&#]+)/,
+    /youtube\.com\/shorts\/([^?&#]+)/
+  ];
+  for(const p of patterns){const m=url.match(p);if(m)return m[1];}
+  return null;
 }
 
-// ──────────────────────────────────────────────
-// POST / YOUTUBE SEARCH
-// ──────────────────────────────────────────────
-async function doSearch() {
-  const q = document.getElementById('srch-in').value.trim();
-  if (!q) return;
-  document.getElementById('srch-load').style.display = 'flex';
-  document.getElementById('srch-res').innerHTML = '';
-  try {
-    const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q + ' 音楽 official')}&type=video&videoCategoryId=10&maxResults=5&key=${YTK}`);
-    const d = await r.json();
-    document.getElementById('srch-load').style.display = 'none';
-    if (d.error || !d.items?.length) { dummyResults(q); return; }
-    d.items.forEach(i => addR(i.id.videoId, i.snippet.title, i.snippet.channelTitle, i.snippet.thumbnails.medium?.url));
-  } catch {
-    document.getElementById('srch-load').style.display = 'none';
-    dummyResults(q);
-  }
+function onYtUrlInput(v){
+  if(extractYtId(v))document.getElementById('yt-url-in').style.borderColor='rgba(67,207,198,.4)';
+  else document.getElementById('yt-url-in').style.borderColor='';
 }
 
-function dummyResults(q) {
-  // Fallback: show message to set up YouTube API key
-  const d = document.createElement('div');
-  d.style.cssText = 'padding:16px 20px;font-size:12px;color:var(--tx2);line-height:1.7;';
-  d.innerHTML = `<div style="margin-bottom:6px;color:var(--cr);font-weight:600;">YouTube APIキーが必要です</div>YouTubeで「${esc(q)}」を検索してコードを取得し、手動で入力することができます。<br><br>デモ用サンプル結果:`;
+async function parseYtUrl(){
+  const url=document.getElementById('yt-url-in').value.trim();
+  const vid=extractYtId(url);
+  if(!vid){toast('有効なYouTubeのURLを貼り付けてください');return;}
+  const thumb=`https://img.youtube.com/vi/${vid}/mqdefault.jpg`;
+  // Try to get title via oEmbed (no API key needed)
+  let title='YouTube 動画',ch='YouTube';
+  try{
+    const r=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${vid}&format=json`);
+    const d=await r.json();
+    title=d.title||title;ch=d.author_name||ch;
+  }catch(e){}
+  pickS(vid,title,ch,thumb);
+  document.getElementById('srch-res').innerHTML='';
+  document.getElementById('yt-url-in').value='';
+  toast('✅ 曲を読み込みました！');
+}
+
+async function doSearch(){
+  const q=document.getElementById('srch-in').value.trim();if(!q)return;
+  document.getElementById('srch-load').style.display='flex';
+  document.getElementById('srch-res').innerHTML='';
+  // Try oEmbed search via YouTube (no key): fallback to direct search hint
+  document.getElementById('srch-load').style.display='none';
+  showSearchHint(q);
+}
+
+function showSearchHint(q){
+  // YouTube Data API requires key, so guide user to paste URL
+  const d=document.createElement('div');
+  d.style.cssText='padding:14px 20px;';
+  d.innerHTML=`
+    <div style="font-size:12px;color:var(--tx2);line-height:1.7;background:var(--s2);border-radius:12px;padding:14px;">
+      <div style="font-weight:700;color:var(--cr);margin-bottom:6px;">💡 YouTubeのURLを貼るのが一番早い！</div>
+      <div style="margin-bottom:8px;">1. YouTubeで「<strong>${esc(q)}</strong>」を検索</div>
+      <div style="margin-bottom:8px;">2. 曲のURLをコピー</div>
+      <div>3. 上の「URLを貼り付ける」欄に貼る</div>
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--tx3);text-align:center;">またはYouTubeアプリで「共有」→ コピー → hearmeに貼り付け</div>`;
   document.getElementById('srch-res').appendChild(d);
-  [['x8VYWazR5mE','夜にかける','YOASOBI'],['SX_ViT4Ra7k','Pale Blue','米津玄師'],['gdZLi9oWNZg','Dynamite','BTS']].forEach(([v, t, c]) =>
-    addR(v, t, c, `https://img.youtube.com/vi/${v}/mqdefault.jpg`));
 }
 
-function addR(vid, title, ch, thumb) {
-  const d = document.createElement('div');
-  d.className = 'res-item';
-  d.innerHTML = `<div class="res-th"><img src="${thumb||''}" onerror="this.style.display='none'" alt=""/></div><div class="res-info"><div class="res-ttl">${esc(title)}</div><div class="res-ch">${esc(ch)}</div></div><div class="res-sel" id="rs${vid}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>`;
-  d.onclick = () => pickS(vid, title, ch, thumb);
+function addR(vid,title,ch,thumb){
+  const d=document.createElement('div');d.className='res-item';
+  d.innerHTML=`<div class="res-th"><img src="${thumb||''}" onerror="this.style.display='none'" alt=""/></div><div class="res-info"><div class="res-ttl">${esc(title)}</div><div class="res-ch">${esc(ch)}</div></div><div class="res-sel" id="rs${vid}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+  d.onclick=()=>pickS(vid,title,ch,thumb);
   document.getElementById('srch-res').appendChild(d);
 }
 
-function pickS(vid, title, ch, thumb) {
-  _song = { vid, title, ch, thumb };
-  document.getElementById('sel-img').src = thumb || '';
-  document.getElementById('sel-t').textContent = title;
-  document.getElementById('sel-a').textContent = ch;
-  document.getElementById('sel-prev').style.display = 'flex';
-  document.querySelectorAll('.res-sel').forEach(e => e.classList.remove('on'));
-  document.getElementById('rs' + vid)?.classList.add('on');
+function pickS(vid,title,ch,thumb){
+  _song={vid,title,ch,thumb};
+  document.getElementById('sel-img').src=thumb||'';
+  document.getElementById('sel-t').textContent=title;
+  document.getElementById('sel-a').textContent=ch;
+  document.getElementById('sel-prev').style.display='flex';
+  document.querySelectorAll('.res-sel').forEach(e=>e.classList.remove('on'));
+  document.getElementById('rs'+vid)?.classList.add('on');
   updPt();
 }
 
-function pickE(c) {
-  document.querySelectorAll('.ec').forEach(x => x.classList.remove('on'));
-  c.classList.add('on');
-  _emo = c.textContent;
-  updPt();
-}
+function pickE(c){document.querySelectorAll('.ec').forEach(x=>x.classList.remove('on'));c.classList.add('on');_emo=c.textContent;updPt();}
+function updPt(){document.getElementById('pt-go').classList.toggle('ok',!!(_song&&_emo));}
+function updC(){document.getElementById('cmt-c').textContent=document.getElementById('cmt-ta').value.length;}
 
-function updPt() { document.getElementById('pt-go').classList.toggle('ok', !!(_song && _emo)); }
-function updC() { document.getElementById('cmt-c').textContent = document.getElementById('cmt-ta').value.length; }
-
-function doPost() {
-  if (!_song || !_emo) { toast('曲と気分を選んでください'); return; }
-  const posts = getMyPosts();
-  posts.unshift({
-    song: _song.title,
-    artist: _song.ch,
-    vid: _song.vid,
-    thumb: _song.thumb,
-    emo: _emo,
-    comment: document.getElementById('cmt-ta').value,
-    time: new Date().toISOString(),
-    fromBr: _fromBr
-  });
-  saveMyPosts(posts);
-  go('home');
-  toast(_fromBr ? '投稿しました！フレンドに届けました 🎵🔴' : '投稿しました 🎵');
-  // Reset
-  _song = null; _emo = null; _fromBr = false;
-  document.getElementById('srch-in').value = '';
-  document.getElementById('srch-res').innerHTML = '';
-  document.getElementById('sel-prev').style.display = 'none';
-  document.getElementById('cmt-ta').value = '';
-  document.getElementById('cmt-c').textContent = '0';
-  document.querySelectorAll('.ec').forEach(c => c.classList.remove('on'));
+function doPost(){
+  if(!_song||!_emo){toast('曲と気分を選んでください');return;}
+  const posts=getMyPosts();
+  posts.unshift({song:_song.title,artist:_song.ch,vid:_song.vid,thumb:_song.thumb,emo:_emo,comment:document.getElementById('cmt-ta').value,time:new Date().toISOString(),fromBr:_fromBr});
+  saveMyPosts(posts);go('home');
+  toast(_fromBr?'投稿しました！フレンドに届けました 🎵🔴':'投稿しました 🎵');
+  _song=null;_emo=null;_fromBr=false;
+  document.getElementById('srch-in').value='';
+  document.getElementById('srch-res').innerHTML='';
+  document.getElementById('sel-prev').style.display='none';
+  document.getElementById('cmt-ta').value='';
+  document.getElementById('cmt-c').textContent='0';
+  document.querySelectorAll('.ec').forEach(c=>c.classList.remove('on'));
   document.getElementById('pt-go').classList.remove('ok');
-  document.getElementById('pt-br').style.display = 'none';
+  document.getElementById('pt-br').style.display='none';
 }
 
-// ──────────────────────────────────────────────
-// UTILITIES
-// ──────────────────────────────────────────────
-function fmtTime(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function fmtTime(iso){
+  if(!iso)return'';const d=new Date(iso);
+  return`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
-
-function relTime(iso) {
-  if (!iso) return '';
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60) return '今';
-  if (diff < 3600) return `${Math.floor(diff/60)}分前`;
-  if (diff < 86400) return `${Math.floor(diff/3600)}時間前`;
-  return `${Math.floor(diff/86400)}日前`;
+function relTime(iso){
+  if(!iso)return'';const diff=(Date.now()-new Date(iso).getTime())/1000;
+  if(diff<60)return'今';if(diff<3600)return`${Math.floor(diff/60)}分前`;
+  if(diff<86400)return`${Math.floor(diff/3600)}時間前`;return`${Math.floor(diff/86400)}日前`;
 }
-
-let _tt = null;
-function toast(msg) {
-  const t = document.getElementById('toast-el');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(_tt);
-  _tt = setTimeout(() => t.classList.remove('show'), 2800);
+let _tt=null;
+function toast(msg){
+  const t=document.getElementById('toast-el');t.textContent=msg;t.classList.add('show');
+  clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),2800);
 }
-
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 </script>
 </body>
 </html>
