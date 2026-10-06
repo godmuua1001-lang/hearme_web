@@ -986,7 +986,7 @@ function emailFlow({ link, mount }) {
     };
   };
   const step2 = () => {
-    mount.innerHTML = `<div class="muted" style="font-size:13px;margin-bottom:10px">${esc(email)} に届いた6桁のコード${LIVE ? '' : '（デモ：何でも6桁でOK）'}</div><input class="inp otp" id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"><button class="btn p w" style="margin-top:10px;height:52px" id="otp-go">確認</button><button class="btn w faint" style="margin-top:4px" id="otp-back">メールを入れ直す</button>`;
+    mount.innerHTML = `<div class="card" style="padding:14px;margin-bottom:12px;font-size:13px;line-height:1.7"><b>📩 ${esc(email)} にメールを送りました</b><br>${link ? 'メール内のリンクを開くと登録が完了します。完了したらこの画面に戻ってきてね' : 'メール内のリンクを開くとログインできます'}<br><span class="faint">届かないときは迷惑メールフォルダも見てね</span></div><div class="faint" style="font-size:12px;margin-bottom:8px">メールに6桁のコードが書いてある場合はこちら${LIVE ? '' : '（デモ：何でも6桁でOK）'}</div><input class="inp otp" id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"><button class="btn p w" style="margin-top:10px;height:52px" id="otp-go">確認</button><button class="btn w faint" style="margin-top:4px" id="otp-back">メールを入れ直す</button>`;
     const o = $('#otp'); setTimeout(() => o.focus(), 200);
     o.oninput = () => { if (o.value.length === 6) $('#otp-go').click(); };
     $('#otp-back').onclick = step1;
@@ -1050,7 +1050,7 @@ async function startApp() {
   if (!LIVE) enrichDemo();
   // 戻ってきたら更新
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') { loadFeeds(); refreshThreads(); loadMoment(); if (S.chat) api.messages(S.chat.peer.id).then(m => { if (S.chat) { S.chat.msgs = m; drawChat(); api.markRead(S.chat.peer.id); } }).catch(() => {}); }
+    if (document.visibilityState === 'visible') { api.refreshUser?.().then(u => { if (u && S.user?.email !== u.email) { S.user = u; if (pageStack.includes('pg-settings')) openSettings(); if (u.email && !u.anonymous) toast('✅ メールの登録が完了しました'); } }).catch(() => {}); loadFeeds(); refreshThreads(); loadMoment(); if (S.chat) api.messages(S.chat.peer.id).then(m => { if (S.chat) { S.chat.msgs = m; drawChat(); api.markRead(S.chat.peer.id); } }).catch(() => {}); }
   });
 }
 function handleDeepLink(q) {

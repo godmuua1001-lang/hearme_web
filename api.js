@@ -52,13 +52,19 @@ class LiveAPI {
     this.session = d.session; return this.user();
   }
   async sendEmailCode(email, { link }) {
-    if (link) return this._r(await this.sb.auth.updateUser({ email }));      // 匿名→メール引き継ぎ
-    return this._r(await this.sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } }));
+    const emailRedirectTo = location.origin + '/';
+    if (link) return this._r(await this.sb.auth.updateUser({ email }, { emailRedirectTo }));      // 匿名→メール引き継ぎ
+    return this._r(await this.sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo } }));
   }
   async verifyEmailCode(email, token, { link }) {
     const d = this._r(await this.sb.auth.verifyOtp({ email, token, type: link ? 'email_change' : 'email' }));
     if (d.session) this.session = d.session;
     else { const s = await this.sb.auth.getSession(); this.session = s.data.session; }
+    return this.user();
+  }
+  async refreshUser() {
+    const { data } = await this.sb.auth.getUser();
+    if (data?.user && this.session) this.session = { ...this.session, user: data.user };
     return this.user();
   }
   async google({ link }) {
@@ -205,6 +211,7 @@ class DemoAPI {
     if (!this.db.me) await this.signInAnon();
     this.db.me.email = email; this.db.me.anonymous = false; this.save(); return this.db.me;
   }
+  async refreshUser() { return this.db.me; }
   async google() { throw new Error('デモモードではGoogleログインは使えません'); }
   async signOut() { localStorage.removeItem(DK); this.db = demoSeed(); }
   async myProfile() { return this.db.profile; }

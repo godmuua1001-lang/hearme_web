@@ -20,7 +20,8 @@
 
 ## セットアップ状況
 - [x] Supabase プロジェクト作成・`schema.sql` 実行・匿名ログインON
-- [ ] メールのテンプレートに6桁コードを表示（Authentication → Emails）
+- [x] メールはSupabase標準（リンク方式）。URL Configuration の Site URL を本番URLに
+- [ ] （任意）独自SMTP（Resend等）を設定 → テンプレートに `{{ .Token }}` を入れると6桁コードでもログイン可・送信上限も解除
 - [ ] プッシュ通知：Edge Function `push` をデプロイ → Secrets 設定 → `push-setup.sql` 実行
 - [ ] （任意）Googleログイン：Google Cloud で OAuth 作成 → Supabase に設定 → `config.js` の `GOOGLE_LOGIN = true`
 
