@@ -7,6 +7,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="hearme">
 <meta name="theme-color" content="#070708">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <title>hearme</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -24,10 +28,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
 body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .scr{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .18s;background:var(--bg);}
 .scr.on{opacity:1;pointer-events:all;}
-.sb{position:absolute;top:0;left:0;right:0;z-index:200;height:calc(var(--sat)+24px);display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 5px;font-size:12px;font-weight:600;}
-.pg{position:absolute;top:calc(var(--sat)+24px);left:0;right:0;bottom:calc(var(--sab)+58px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+.sb{position:absolute;top:0;left:0;right:0;z-index:200;height:calc(var(--sat) + 24px);display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 5px;font-size:12px;font-weight:600;}
+.sb span[id^="t"]{visibility:hidden;}
+.pg{position:absolute;top:calc(var(--sat) + 24px);left:0;right:0;bottom:calc(var(--sab) + 58px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
 .pg::-webkit-scrollbar{display:none;}
-.bnav{position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--ln2);display:flex;align-items:center;justify-content:space-around;padding-bottom:var(--sab);padding-top:8px;z-index:100;height:calc(var(--sab)+58px);}
+.bnav{position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--ln2);display:flex;align-items:center;justify-content:space-around;padding-bottom:var(--sab);padding-top:8px;z-index:100;height:calc(var(--sab) + 58px);}
 .nb{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--tx3);transition:color .15s;padding:3px 12px;font-family:'DM Sans',sans-serif;position:relative;}
 .nb.on{color:var(--cr);}
 .nb svg{width:21px;height:21px;}
@@ -50,7 +55,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .inp{width:100%;background:var(--s2);border:1px solid var(--ln2);border-radius:12px;padding:13px 15px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--tx);outline:none;transition:border-color .15s;}
 .inp:focus{border-color:var(--ln3);}
 .inp::placeholder{color:var(--tx3);}
-.toast{position:fixed;z-index:9999;bottom:calc(var(--sab)+68px);left:16px;right:16px;background:var(--cr);color:var(--bg);border-radius:13px;padding:12px 18px;font-size:13px;font-weight:600;text-align:center;transform:translateY(14px);opacity:0;transition:transform .22s,opacity .22s;pointer-events:none;}
+.toast{position:fixed;z-index:9999;bottom:calc(var(--sab) + 68px);left:16px;right:16px;background:var(--cr);color:var(--bg);border-radius:13px;padding:12px 18px;font-size:13px;font-weight:600;text-align:center;white-space:pre-line;transform:translateY(14px);opacity:0;transition:transform .22s,opacity .22s;pointer-events:none;}
 .toast.on{transform:translateY(0);opacity:1;}
 .chip{font-size:10px;background:var(--s3);border:1px solid var(--ln);padding:3px 9px;border-radius:20px;color:var(--tx2);white-space:nowrap;}
 .ld{width:6px;height:6px;border-radius:50%;background:var(--rs);display:inline-block;animation:ld 1.3s infinite;}
@@ -86,7 +91,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 
 /* ONBOARDING */
 #scr-onboard{overflow:hidden;}
-.ob-pg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:calc(var(--sat)+32px) 24px 32px;overflow-y:auto;}
+.ob-pg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:calc(var(--sat) + 32px) 24px 32px;overflow-y:auto;}
 .ob-pg::-webkit-scrollbar{display:none;}
 .ob-logo{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:var(--cr);margin-bottom:26px;}
 .ob-wrap{width:100%;max-width:380px;}
@@ -172,7 +177,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 /* SONG MODAL */
 .modal-bg{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55);display:none;backdrop-filter:blur(3px);}
 .modal-bg.on{display:block;}
-.modal-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:22px 22px 0 0;border-top:1px solid var(--ln2);transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:90%;overflow-y:auto;padding-bottom:calc(var(--sab)+6px);}
+.modal-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:22px 22px 0 0;border-top:1px solid var(--ln2);transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:90%;overflow-y:auto;padding-bottom:calc(var(--sab) + 6px);}
 .modal-sheet::-webkit-scrollbar{display:none;}
 .modal-bg.on .modal-sheet{transform:translateY(0);}
 .pull{width:32px;height:4px;border-radius:2px;background:var(--s4);margin:10px auto 8px;}
@@ -192,14 +197,14 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 .md-cmt-l{font-size:9px;color:var(--tx3);letter-spacing:.09em;text-transform:uppercase;margin-bottom:4px;}
 
 /* DM */
-.dm-hd{display:flex;align-items:center;gap:12px;padding:calc(var(--sat)+12px) 20px 12px;border-bottom:1px solid var(--ln);background:var(--bg);}
-.dm-pg{position:absolute;top:calc(var(--sat)+68px);left:0;right:0;bottom:72px;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px;}
+.dm-hd{display:flex;align-items:center;gap:12px;padding:calc(var(--sat) + 12px) 20px 12px;border-bottom:1px solid var(--ln);background:var(--bg);}
+.dm-pg{position:absolute;top:calc(var(--sat) + 68px);left:0;right:0;bottom:calc(var(--sab) + 64px);overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:9px;}
 .dm-pg::-webkit-scrollbar{display:none;}
 .bubble{max-width:74%;padding:10px 13px;font-size:13px;line-height:1.5;word-break:break-word;}
 .bubble.me{background:var(--cr);color:var(--bg);align-self:flex-end;border-radius:16px 16px 3px 16px;}
 .bubble.them{background:var(--s2);color:var(--tx);align-self:flex-start;border-radius:16px 16px 16px 3px;}
 .bubble-t{font-size:9px;opacity:.45;margin-top:3px;}
-.dm-bar{position:absolute;bottom:0;left:0;right:0;padding:10px 14px calc(var(--sab)+10px);background:var(--bg);border-top:1px solid var(--ln);display:flex;gap:8px;align-items:flex-end;}
+.dm-bar{position:absolute;bottom:0;left:0;right:0;padding:10px 14px calc(var(--sab) + 10px);background:var(--bg);border-top:1px solid var(--ln);display:flex;gap:8px;align-items:flex-end;}
 .dm-ta{flex:1;background:var(--s2);border:1px solid var(--ln2);border-radius:20px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--tx);outline:none;resize:none;min-height:40px;max-height:100px;line-height:1.4;}
 .dm-ta:focus{border-color:var(--ln3);}
 .dm-ta::placeholder{color:var(--tx3);}
@@ -270,7 +275,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
     </div>
   </div>
   <div class="sp-hint"><div class="sp-hint-t">タップして始める</div><div class="sp-hint-l"></div></div>
-  <div style="position:absolute;bottom:18px;right:18px;font-size:10px;color:var(--tx3);">v6.0</div>
+  <div style="position:absolute;bottom:18px;right:18px;font-size:10px;color:var(--tx3);">v6.1</div>
 </div>
 
 <!-- ══ ONBOARDING ══ -->
@@ -428,13 +433,13 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 <!-- ══ POST ══ -->
 <div class="scr" id="scr-post">
   <div class="sb"><span id="t2">9:41</span></div>
-  <div style="position:absolute;top:calc(var(--sat)+24px);left:0;right:0;bottom:calc(var(--sab)+58px);overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  <div style="position:absolute;top:calc(var(--sat) + 24px);left:0;right:0;bottom:calc(var(--sab) + 58px);overflow-y:auto;-webkit-overflow-scrolling:touch;">
     <div class="pt-hd">
       <span style="font-size:12px;color:var(--tx2);cursor:pointer;" onclick="go('home')">キャンセル</span>
       <span class="pt-ttl">曲をシェア</span>
       <button class="btn-p pt-go" id="pt-go" onclick="doPost()">投稿</button>
     </div>
-    <div id="pt-br" style="display:none;margin:0 20px 10px;padding:9px 12px;background:rgba(255,95,126,.07);border:1px solid rgba(255,95,126,.18);border-radius:11px;display:none;align-items:center;gap:7px;">
+    <div id="pt-br" style="margin:0 20px 10px;padding:9px 12px;background:rgba(255,95,126,.07);border:1px solid rgba(255,95,126,.18);border-radius:11px;display:none;align-items:center;gap:7px;">
       <span class="ld"></span><span style="font-size:11px;color:var(--rs);font-weight:600;">hearme通知からの投稿</span>
     </div>
     <div style="padding:2px 20px 5px;font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.08em;text-transform:uppercase;">曲を検索</div>
@@ -593,6 +598,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
         <div class="emo-opt" onclick="setEmoji(this,'🌸')">🌸</div>
         <div class="emo-opt" onclick="setEmoji(this,'⚡')">⚡</div>
         <div class="emo-opt" onclick="setEmoji(this,'🦋')">🦋</div>
+        <div class="emo-opt" onclick="setEmoji(this,'🐧')">🐧</div>
+        <div class="emo-opt" onclick="setEmoji(this,'🍂')">🍂</div>
       </div>
     </div>
     <div class="set-sec">
@@ -663,7 +670,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--tx);position:fixed;inset:0;}
 // ════════════════════════════════════════
 const LS={
   g:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},
-  s:(k,v)=>localStorage.setItem(k,JSON.stringify(v))
+  s:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){toast('保存容量がいっぱいです。写真を小さくするか履歴を減らしてください');return false;}}
 };
 const gP=()=>LS.g('hm_p')||{name:'',ava:'🎧',ap:'',bio:'',code:'',ok:false};
 const sP=p=>LS.s('hm_p',p);
@@ -689,7 +696,7 @@ function avaHTML(avaPhoto,ava,size=40){
 }
 function setAva(el,avaPhoto,ava,size=40){
   el.style.width=size+'px';el.style.height=size+'px';el.style.fontSize=(size*.43)+'px';
-  el.innerHTML=avaPhoto?`<img src="${avaPhoto}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:(ava||'🎧');
+  el.innerHTML=avaPhoto?`<img src="${avaPhoto}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:x(ava||'🎧');
 }
 
 // ════════════════════════════════════════
@@ -751,14 +758,24 @@ function go(id){
 // ════════════════════════════════════════
 // ONBOARDING
 // ════════════════════════════════════════
+function shrinkImg(file,cb,size=256){
+  const r=new FileReader();
+  r.onload=e=>{const img=new Image();img.onload=()=>{
+    const c=document.createElement('canvas');c.width=c.height=size;
+    const m=Math.min(img.width,img.height),sx=(img.width-m)/2,sy=(img.height-m)/2;
+    c.getContext('2d').drawImage(img,sx,sy,m,m,0,0,size,size);
+    cb(c.toDataURL('image/jpeg',.82));
+  };img.onerror=()=>toast('画像を読み込めませんでした');img.src=e.target.result;};
+  r.readAsDataURL(file);
+}
 function obPhoto(input){
   const f=input.files[0];if(!f)return;
-  const r=new FileReader();r.onload=e=>{
+  shrinkImg(f,data=>{const e={target:{result:data}};
     _obAp=e.target.result;_obAva='';
     const el=document.getElementById('ob-photo');
     el.innerHTML=`<img src="${e.target.result}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;" alt=""/>`;
     document.querySelectorAll('#ob-emo-row .emo-opt').forEach(x=>x.classList.remove('on'));
-  };r.readAsDataURL(f);
+  });
 }
 function obEmoji(el,e){
   document.querySelectorAll('#ob-emo-row .emo-opt').forEach(x=>x.classList.remove('on'));
@@ -825,10 +842,10 @@ function doCopy(){
 
 function handleURL(){
   const params=new URLSearchParams(location.search);
-  const code=params.get('inv');if(!code)return;
-  const name=params.get('n')||`フレンド (${code})`;
-  const ava=params.get('a')||'🎵';
-  const bio=params.get('b')||'';
+  const code=(params.get('inv')||'').toUpperCase();if(!/^[A-Z0-9]{6}$/.test(code))return;
+  const name=(params.get('n')||`フレンド (${code})`).slice(0,20);
+  const ava=[...(params.get('a')||'🎵')].slice(0,4).join('').replace(/[<>"'&]/g,'')||'🎵';
+  const bio=(params.get('b')||'').slice(0,40);
   const me=gP();if(code===me.code)return;
   const friends=gF();
   const exists=friends.find(f=>f.code===code);
@@ -883,7 +900,7 @@ function renderHome(){
   renderCelebStrip();
 
   const hasFr=friends.length>0;
-  document.getElementById('lock-wall').style.display=hasFr?'none':'block';
+  document.getElementById('lock-wall').style.display=hasFr?'none':'flex';
   document.getElementById('fr-count').textContent=hasFr?`${friends.length}人`:'';
 
   // Feed
@@ -893,7 +910,7 @@ function renderHome(){
       // フレンドの投稿はLocalStorageのキーで読む
       const frPosts=LS.g('hm_posts_'+fr.code)||[];
       const el=document.createElement('div');el.className='card feed-card';
-      const avaEl=`<div class="ava" style="width:42px;height:42px;font-size:20px;">${fr.ap?`<img src="${fr.ap}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:(fr.ava||'🎵')}</div>`;
+      const avaEl=`<div class="ava" style="width:42px;height:42px;font-size:20px;">${fr.ap?`<img src="${fr.ap}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:x(fr.ava||'🎵')}</div>`;
       if(!frPosts.length){
         el.style.opacity='.5';
         el.innerHTML=`${avaEl}<div class="fi"><div class="fi-meta">${x(fr.name)}</div><div class="fi-song" style="color:var(--tx3);">まだ投稿していません</div></div><span style="font-size:18px;">🔒</span>`;
@@ -911,8 +928,9 @@ function renderHome(){
   if(myPosts.length){
     myWrap.style.display='block';
     const post=myPosts[0];
-    const myAvaHTML=p.ap?`<img src="${p.ap}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:p.ava;
-    document.getElementById('my-card').innerHTML=`<div class="card feed-card" onclick="openModal(${safeJSON(post)})"><div class="ava" style="width:42px;height:42px;font-size:20px;">${myAvaHTML}</div><div class="fi"><div class="fi-meta">自分 · ${rel(post.time)}</div><div class="fi-song">${x(post.song)}</div><div class="fi-art">${x(post.artist)}</div></div><div class="fi-r"><div class="chip">${x(post.emo)}</div><div style="font-size:9px;color:var(--tx3);">${fmt(post.time)}</div></div></div>`;
+    const myAvaHTML=p.ap?`<img src="${p.ap}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:x(p.ava);
+    document.getElementById('my-card').innerHTML=`<div class="card feed-card" id="my-feed-card"><div class="ava" style="width:42px;height:42px;font-size:20px;">${myAvaHTML}</div><div class="fi"><div class="fi-meta">自分 · ${rel(post.time)}</div><div class="fi-song">${x(post.song)}</div><div class="fi-art">${x(post.artist)}</div></div><div class="fi-r"><div class="chip">${x(post.emo)}</div><div style="font-size:9px;color:var(--tx3);">${fmt(post.time)}</div></div></div>`;
+      document.getElementById('my-feed-card').onclick=()=>openModal(post);
   } else {myWrap.style.display='none';}
 
   // DM badge
@@ -945,7 +963,7 @@ const CELEBS=[
   {id:'c5',name:'Ado',ava:'🎭',acl:'#3ecfc5',song:'うっせぇわ',emo:'😤',vid:'Mt7HkGW8KWo',thumb:''},
   {id:'c6',name:'back number',ava:'📷',acl:'#bfb9ab',song:'水平線',emo:'😌',vid:'gdZLi9oWNZg',thumb:''},
   {id:'c7',name:'King Gnu',ava:'👁',acl:'#42444b',song:'白日',emo:'😌',vid:'oo3txq3lKRE',thumb:''},
-  {id:'c8',name:'優里',ava:'🌹',acl:'#rs',song:'ドライフラワー',emo:'😢',vid:'',thumb:''},
+  {id:'c8',name:'優里',ava:'🌹',acl:'#ff5f7e',song:'ドライフラワー',emo:'😢',vid:'',thumb:''},
 ];
 
 function renderCelebStrip(){
@@ -958,7 +976,7 @@ function renderCelebStrip(){
   followed.forEach(c=>{
     const el=document.createElement('div');el.className='celeb-item';
     el.onclick=()=>openModal({song:c.song,artist:c.name,emo:c.emo,vid:c.vid,thumb:c.thumb,comment:''},null,c);
-    el.innerHTML=`<div class="celeb-ava" style="border-color:${c.acl};">${c.ava}<div class="celeb-live"></div></div><div class="celeb-name">${x(c.name)}</div>`;
+    el.innerHTML=`<div class="celeb-ava" style="border-color:${c.acl};">${x(c.ava)}<div class="celeb-live"></div></div><div class="celeb-name">${x(c.name)}</div>`;
     strip.appendChild(el);
   });
 }
@@ -1075,7 +1093,7 @@ function openModal(post,fr,celeb){
   const avaEl=document.getElementById('md-ava');
   const who=celeb?celeb.name:(fr?fr.name:gP().name);
   const ava=celeb?celeb.ava:(fr?fr.ava:gP().ava);
-  const ap=fr?.ap||'';
+  const ap=celeb?'':(fr?fr.ap:gP().ap);
   setAva(avaEl,ap,ava,42);
   document.getElementById('md-who').textContent=who;
   document.getElementById('md-emo-lbl').textContent=post.emo||'';
@@ -1126,7 +1144,7 @@ function renderDmList(){
     const isUnread=last&&last.from===fr.code&&msgs.length>(LS.g('hm_dm_seen_'+key)||0);
     const row=document.createElement('div');row.className='dm-row';
     row.onclick=()=>openDM(fr.code);
-    const avaHTML=fr.ap?`<img src="${fr.ap}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:fr.ava||'🎵';
+    const avaHTML=fr.ap?`<img src="${fr.ap}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:x(fr.ava||'🎵');
     row.innerHTML=`<div class="ava" style="width:44px;height:44px;font-size:21px;">${avaHTML}</div><div class="dm-row-info"><div class="dm-row-name">${x(fr.name)}${isUnread?'<span style="display:inline-block;width:7px;height:7px;background:var(--bl);border-radius:50%;margin-left:6px;vertical-align:middle;"></span>':''}</div><div class="dm-row-preview">${last?x(last.text):'メッセージを送ってみよう'}</div></div>${last?`<div class="dm-row-time">${rel(last.time)}</div>`:''}`;
     el.appendChild(row);
   });
@@ -1194,10 +1212,10 @@ function renderProfile(){
   renderGraph(posts);
   // Friends
   const fl=document.getElementById('fr-list');fl.innerHTML='';
-  if(!friends.length){fl.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:6px 0;">まだフレンドがいません</div>';return;}
+  if(!friends.length){fl.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:6px 0;">まだフレンドがいません</div>';}
   friends.forEach(fr=>{
     const row=document.createElement('div');row.className='fr-row';
-    const avaHTML=fr.ap?`<img src="${fr.ap}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:fr.ava||'🎵';
+    const avaHTML=fr.ap?`<img src="${fr.ap}" style="width:100%;height:100%;object-fit:cover;" alt=""/>`:x(fr.ava||'🎵');
     // フレンドの最新投稿
     const frPosts=LS.g('hm_posts_'+fr.code)||[];
     const last=frPosts[0];
@@ -1206,7 +1224,7 @@ function renderProfile(){
   });
   // History
   const hl=document.getElementById('hist-list');hl.innerHTML='';
-  if(!posts.length){hl.innerHTML='<div class="empty"><div style="font-size:30px;margin-bottom:8px;">🎵</div>まだ投稿がありません</div>';return;}
+  if(!posts.length){hl.innerHTML='<div class="empty"><div style="font-size:30px;margin-bottom:8px;">🎵</div>まだ投稿がありません</div>';}
   posts.slice(0,30).forEach(post=>{
     const el=document.createElement('div');el.className='card hs-card';
     el.onclick=()=>openModal(post);
@@ -1251,11 +1269,11 @@ function openSet(){
 }
 function setPhoto(input){
   const f=input.files[0];if(!f)return;
-  const r=new FileReader();r.onload=e=>{
+  shrinkImg(f,data=>{const e={target:{result:data}};
     _setAp=e.target.result;
     document.getElementById('set-photo').innerHTML=`<img src="${e.target.result}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;" alt=""/>`;
     document.querySelectorAll('#set-emo-row .emo-opt').forEach(el=>el.classList.remove('on'));
-  };r.readAsDataURL(f);
+  });
 }
 function setEmoji(el,e){
   document.querySelectorAll('#set-emo-row .emo-opt').forEach(el=>el.classList.remove('on'));
