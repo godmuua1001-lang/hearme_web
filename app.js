@@ -246,7 +246,7 @@ function renderHome() {
   const todayFriends = new Set(S.feed.filter(p => !p.mine && isToday(p.created_at)).map(p => p.author?.id));
   let feedHTML;
   if (!loaded) feedHTML = skeletonPosts(3);
-  else if (S.mode === 'friends' && !S.friends.length) feedHTML = `<div class="card" style="margin:6px 16px;"><div class="empty"><span class="e-ic">🎧</span><b>フレンドを招待しよう</b>招待リンクを送ると、お互いの「今日の1曲」が届くようになります<div style="display:flex;gap:8px;justify-content:center;margin-top:16px"><button class="btn p sm" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g sm" data-act="add-friend">コードで追加</button></div></div></div>`;
+  else if (S.mode === 'friends' && !S.friends.length) feedHTML = `<div class="card" style="margin:6px 16px 14px;"><div class="empty"><span class="e-ic">🎧</span><b>フレンドを招待しよう</b>招待リンクを送ると、お互いの「今日の1曲」が届くようになります<div style="display:flex;gap:8px;justify-content:center;margin-top:16px"><button class="btn p sm" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g sm" data-act="add-friend">コードで追加</button></div></div></div>` + list.filter(p => p.mine).map(postCard).join('');
   else if (!list.length) feedHTML = S.mode === 'friends'
     ? `<div class="empty"><span class="e-ic">🌙</span><b>まだ静かです</b>フレンドの投稿はここに届きます。<br>先に今日の1曲をシェアしてみよう</div>`
     : `<div class="empty"><span class="e-ic">🌍</span><b>まだ誰も投稿していません</b>「みんなにも届ける」をオンにして投稿すると、ここに匿名で並びます</div>`;
@@ -865,6 +865,8 @@ async function loadFeeds() {
   try {
     const [feed, mine] = await Promise.all([api.friendFeed(), api.myPosts()]);
     S.feed = remember(feed); S.mine = remember(mine); S.loaded.feed = S.loaded.mine = true;
+    // 相手から追加されたフレンドを取りこぼさない
+    if (feed.some(p => !p.mine && p.author?.id && !S.friends.some(f => f.id === p.author.id))) await loadFriends();
   } catch (e) { toast(errText(e)); }
   if (S.mode === 'public' || S.loaded.pub) await loadPublic(true);
   render();
@@ -905,7 +907,8 @@ function wireRealtime() {
       if (!S.chat.msgs.some(x => x.id === m.id)) S.chat.msgs.push(m);
       S.chat.typingUntil = 0; drawChat(); api.markRead(m.sender).catch(() => {}); buzz(6);
     } else {
-      const f = S.friends.find(x => x.id === m.sender);
+      let f = S.friends.find(x => x.id === m.sender);
+      if (!f) { await loadFriends(); f = S.friends.find(x => x.id === m.sender); if (S.tab === 'home') renderHome(); }
       const txt = m.song?.reaction ? `${m.song.reaction} 「${m.song.title}」にリアクション` : m.song ? `🎵 ${m.song.title}` : m.body;
       if (document.visibilityState === 'visible') toast(`💬 ${f?.name || 'フレンド'}：${String(txt).slice(0, 40)}`);
       buzz(10);
