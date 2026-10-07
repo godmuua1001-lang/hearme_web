@@ -2,6 +2,26 @@
 const IT = 'https://itunes.apple.com';
 const cache = new Map();
 
+// iPhone Safari は itunes.apple.com への直接アクセスを弾くことがあるので、
+// 失敗したら自サイトの中継（/api/itunes）に切り替える
+let viaProxy = /iP(hone|ad|od)/.test(navigator.userAgent) || sessionStorage.getItem('hm_it_proxy') === '1';
+async function itunes(type, params, signal) {
+  const qs = new URLSearchParams(params).toString();
+  const proxied = () => fetch(`/api/itunes?type=${type}&${qs}`, { signal }).then(r => r.json());
+  if (viaProxy) return proxied();
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
+    signal?.addEventListener('abort', () => ctl.abort());
+    const r = await fetch(`${IT}/${type}?${qs}`, { signal: ctl.signal }); clearTimeout(t);
+    if (!r.ok) throw new Error('status ' + r.status);
+    return await r.json();
+  } catch (e) {
+    if (signal?.aborted) throw e;
+    viaProxy = true; try { sessionStorage.setItem('hm_it_proxy', '1'); } catch { /* */ }
+    return proxied();
+  }
+}
+
 function norm(t) {
   return {
     track_id: t.trackId, title: t.trackName, artist: t.artistName,
@@ -15,8 +35,7 @@ export async function search(q, { signal, limit = 20 } = {}) {
   q = q.trim(); if (!q) return [];
   const key = q + '|' + limit;
   if (cache.has(key)) return cache.get(key);
-  const r = await fetch(`${IT}/search?term=${encodeURIComponent(q)}&media=music&entity=song&limit=${limit}&country=JP&lang=ja_jp`, { signal });
-  const d = await r.json();
+  const d = await itunes('search', { term: q, media: 'music', entity: 'song', limit, country: 'JP', lang: 'ja_jp' }, signal);
   const seen = new Set();
   const out = (d.results || []).filter(t => t.kind === 'song').map(norm).filter(t => {
     const k = (t.title + '|' + t.artist).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true;
@@ -27,8 +46,7 @@ export async function search(q, { signal, limit = 20 } = {}) {
 
 export async function lookup(ids) {
   if (!ids.length) return [];
-  const r = await fetch(`${IT}/lookup?id=${ids.join(',')}&country=JP&lang=ja_jp`);
-  const d = await r.json();
+  const d = await itunes('lookup', { id: ids.join(','), country: 'JP', lang: 'ja_jp' });
   return (d.results || []).filter(t => t.kind === 'song').map(norm);
 }
 
