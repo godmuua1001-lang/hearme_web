@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '9.2.1';
+const VERSION = '10.0.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -54,6 +54,7 @@ const moodChip = m => { const o = moodOf(m); return `<span class="mchip" style="
 
 // ───────── icons ─────────
 const I = {
+  chat: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20.5 12a8 8 0 0 1-11.8 7L3.5 20.5 5 15.6A8 8 0 1 1 20.5 12z"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5.5" y="4" width="4.5" height="16" rx="1.2"/><rect x="14" y="4" width="4.5" height="16" rx="1.2"/></svg>',
   note: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
@@ -220,28 +221,28 @@ addEventListener('popstate', () => {
 // ═══════════════════════ TABS ═══════════════════════
 function setTab(t) {
   if (S.tab === t) { $('#t-' + t).scrollTo({ top: 0, behavior: 'smooth' }); return; }
-  S.tab = t; buzz(5);
+  S.tab = t; buzz(5); document.body.dataset.tab = t;
   $$('.tab').forEach(x => x.classList.toggle('on', x.id === 't-' + t));
   $$('.nb').forEach(x => x.classList.toggle('on', x.dataset.tab === t));
-  if (t === 'explore' && !S.loaded.chart) loadChart();
-  if (t === 'dm') refreshThreads();
-  if (t === 'me') { refreshMe(); S.seenActivity = S.activity.length; badges(); }
+  if (t === 'dm') { refreshThreads(); loadNotifs(); }
+  if (t === 'me') refreshMe();
   render();
 }
 
 function render() {
   if (S.tab === 'home') renderHome();
-  else if (S.tab === 'explore') renderExplore();
-  else if (S.tab === 'dm') renderDM();
+  else if (S.tab === 'listen') renderListen();
+  else if (S.tab === 'dm') renderInbox();
   else if (S.tab === 'me') renderMe();
 }
 
 function badges() {
   const un = S.threads.reduce((a, t) => a + (+t.unread || 0), 0);
-  const b = $('#dm-badge'); b.textContent = un > 9 ? '9+' : un; b.classList.toggle('hide', !un);
-  const na = Math.max(0, S.activity.length - S.seenActivity);
-  const m = $('#me-badge'); m.textContent = na > 9 ? '9+' : na; m.classList.toggle('hide', !na || S.tab === 'me');
-  if ('setAppBadge' in navigator) { (un ? navigator.setAppBadge(un) : navigator.clearAppBadge()).catch?.(() => {}); }
+  const nn = V8.notifs.filter(x => !x.read_at && x.kind !== 'care').length;
+  const b = $('#dm-badge'); const n = un + nn; b.textContent = n > 9 ? '9+' : n; b.classList.toggle('hide', !n);
+  const q = listenQueue().filter(p => isToday(p.created_at) && !p.i_listened && !V8.listened.has(p.id)).length;
+  const l = $('#ls-badge'); if (l) { l.textContent = q > 9 ? '9+' : q; l.classList.toggle('hide', !q || S.tab === 'listen'); }
+  if ('setAppBadge' in navigator) { (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch?.(() => {}); }
 }
 
 // ═══════════════════════ HOME ═══════════════════════
@@ -281,34 +282,131 @@ function skeletonPosts(n = 2) {
   return Array.from({ length: n }, () => `<div class="post"><div class="row" style="margin-bottom:12px"><div class="sk" style="width:38px;height:38px;border-radius:50%"></div><div style="flex:1"><div class="sk" style="width:40%;height:12px;margin-bottom:6px"></div><div class="sk" style="width:25%;height:10px"></div></div></div><div class="sk" style="height:80px;border-radius:16px"></div></div>`).join('');
 }
 
+function greet() { const h = new Date().getHours(); return h < 4 ? 'こんばんは' : h < 11 ? 'おはよう' : h < 18 ? 'こんにちは' : 'こんばんは'; }
+// 今日のフレンドの投稿（1人1曲・最新）
+function todayByFriend() {
+  const m = new Map();
+  for (const p of S.feed) { if (p.mine || !p.author?.id || !isToday(p.created_at)) continue; if (!m.has(p.author.id)) m.set(p.author.id, p); }
+  return m;
+}
+function friendRow(f, p) {
+  const mo = moodOf(p.mood); const heard = p.i_listened || V8.listened.has(p.id);
+  return `<button class="fr ${heard ? 'heard' : ''}" style="--mc:${mo.c}" data-act="listen" data-id="${p.id}">
+    <span class="fr-av">${ava(f, 46)}</span>
+    <span class="fr-tx"><b class="ellip">${esc(f.name)}</b><small class="ellip">${esc(p.title)}<i>·</i>${esc(p.artist)}</small></span>
+    <span class="fr-r">${heard ? `<span class="fr-heard">${I.check} 聴いた</span>` : `<span class="fr-new">${I.headphones} きく</span>`}</span></button>`;
+}
 function renderHome() {
   const el = $('#t-home');
-  const list = S.mode === 'friends' ? S.feed : S.pub;
-  const loaded = S.mode === 'friends' ? S.loaded.feed : S.loaded.pub;
-  let feedHTML;
-  if (!loaded) feedHTML = skeletonPosts(3);
-  else if (S.mode === 'friends' && !S.friends.length) feedHTML = `<div class="card" style="margin:6px 16px 14px;"><div class="empty"><span class="e-ic">🎧</span><b>フレンドを招待しよう</b>招待リンクを送ると、お互いの「今日の1曲」が届くようになります<div style="display:flex;gap:8px;justify-content:center;margin-top:16px"><button class="btn p sm" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g sm" data-act="add-friend">コードで追加</button></div></div></div>` + list.filter(p => p.mine).map(postCard).join('');
-  else if (!list.length) feedHTML = S.mode === 'friends'
-    ? `<div class="empty"><span class="e-ic">🌙</span><b>まだ静かです</b>フレンドの投稿はここに届きます。<br>先に今日の1曲をシェアしてみよう</div>`
-    : `<div class="empty"><span class="e-ic">🌍</span><b>まだ誰も投稿していません</b>「みんなにも届ける」をオンにして投稿すると、ここに匿名で並びます</div>`;
-  else feedHTML = list.map(postCard).join('') + (S.mode === 'public' ? `<div class="faint" style="text-align:center;font-size:12px;padding:10px 0 20px">知らない人の名前は表示されません。リアクションだけで気持ちを返そう</div>` : '');
-
+  const tp = todayByFriend();
+  const mine = postedToday()[0];
+  const posted = S.friends.filter(f => tp.has(f.id))
+    .sort((a, b) => (tp.get(a.id).i_listened ? 1 : 0) - (tp.get(b.id).i_listened ? 1 : 0));
+  const waiting = S.friends.filter(f => !tp.has(f.id));
+  const unheard = posted.filter(f => !tp.get(f.id).i_listened && !V8.listened.has(tp.get(f.id).id)).length;
+  let list;
+  if (!S.loaded.feed) list = `<div class="fr-sk">${'<div class="sk" style="height:62px;border-radius:18px"></div>'.repeat(3)}</div>`;
+  else if (!S.friends.length) list = `<div class="invite">
+      <svg class="inv-rb" viewBox="0 0 120 64" aria-hidden="true"><path d="M8 60a52 52 0 0 1 104 0" stroke="#F5C76B" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M20 60a40 40 0 0 1 80 0" stroke="rgba(236,235,231,.12)" stroke-width="6" fill="none" stroke-dasharray="2 7" stroke-linecap="round"/><path d="M32 60a28 28 0 0 1 56 0" stroke="rgba(236,235,231,.12)" stroke-width="6" fill="none" stroke-dasharray="2 7" stroke-linecap="round"/></svg>
+      <b>虹は、ひとりだと細いまま</b><p>仲のいい人を招待すると、その人の色が重なって、毎日の虹ができていきます。</p>
+      <div class="inv-btns"><button class="btn p" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g" data-act="add-friend">コードで追加</button></div></div>`;
+  else list = `
+    ${posted.length ? `<div class="sec2"><span>今日とどいた曲</span>${unheard ? `<button class="sec2-go" data-act="tab" data-tab="listen">まとめてきく ${unheard}</button>` : ''}</div>
+      <div class="frs">${posted.map(f => friendRow(f, tp.get(f.id))).join('')}</div>` : ''}
+    ${waiting.length ? `<div class="sec2"><span>まだ空のまま</span></div><div class="frs wait">${waiting.map(f => `<div class="fr wait">${ava(f, 40)}<span class="fr-tx"><b class="ellip">${esc(f.name)}</b><small>${f.last_post ? `最後の色 · ${rel(f.last_post.created_at)}` : 'まだ色がありません'}</small></span><button class="fr-gift" data-act="gift" data-id="${esc(f.id)}" aria-label="${esc(f.name)}に曲を贈る">${I.gift}</button></div>`).join('')}</div>` : ''}`;
   el.innerHTML = `
     <div class="hd"><div class="logo"><img src="/logo-mark.png" alt=""><span>hearme</span></div>
-      <button class="icon-btn" data-act="inbox" aria-label="おしらせ">${I.bell}<span class="badge bell-badge hide"></span></button>
       <button class="icon-btn" data-act="add-friend" aria-label="フレンド追加">${I.userplus}</button></div>
-    <div class="ptr" id="ptr">↓ 引っ張って更新</div>
+    <div class="ptr" id="ptr"></div>
     ${showInstallCard() ? `<div class="inst"><img src="/icon-192.png" alt=""><span>ホーム画面に追加すると、通知が届きます</span><button class="btn p sm" data-act="install-app">追加</button><button class="inst-x" data-act="install-dismiss" aria-label="閉じる">✕</button></div>` : ''}
-    ${LIVE ? '' : `<div class="demo">🧪 デモモード：データはこの端末だけに保存されます。フレンド（ゆーき・みお）はお試し用です</div>`}
+    ${LIVE ? '' : `<div class="demo">デモモード：データはこの端末だけに保存されます。ゆーき・みおはお試し用のフレンドです</div>`}
+    <div class="hello">${greet()}、${esc(S.profile?.name || '')}</div>
     ${rainbowHTML()}
+    ${mine ? '' : `<button class="addme" data-act="compose"><span class="addme-dots">${RAINBOW_ORDER.map(e => `<i style="background:${MOOD_META[e].c}"></i>`).join('')}</span><span class="addme-tx"><b>今日のあなたの色は？</b><small>気分をえらんで、1曲たす</small></span>${I.plus.replace('<svg', '<svg width="18" height="18"')}</button>`}
     ${bannersHTML()}
-    ${nightCardHTML()}
-    ${recoveryHTML()}
-    ${S.mode === 'friends' ? relayCardsHTML() : ''}
-    <div style="padding:0 16px 12px"><div class="seg"><button class="${S.mode === 'friends' ? 'on' : ''}" data-act="mode" data-m="friends">フレンド</button><button class="${S.mode === 'public' ? 'on' : ''}" data-act="mode" data-m="public">みんな</button></div></div>
-    ${feedHTML}
-    <div style="height:90px"></div>`;
-  bell();
+    ${list}
+    <div style="height:100px"></div>`;
+}
+
+// ═══════════════════════ LISTEN（きく） ═══════════════════════
+function listenQueue() {
+  const fr = S.feed.filter(p => !p.mine && p.author?.id && Date.now() - new Date(p.created_at).getTime() < 3 * 86400000);
+  const heard = p => p.i_listened || V8.listened.has(p.id);
+  return [...fr.filter(p => !heard(p)), ...fr.filter(heard)];
+}
+function slideHTML(p) {
+  const a = p.author || {}; const mo = moodOf(p.mood);
+  const needListen = p.has_comment && p.comment == null;
+  const isFriend = S.friends.some(f => f.id === a.id);
+  return `<section class="slide" data-post="${p.id}" style="--mc:${mo.c}">
+    <div class="sl-bg"></div>
+    <div class="sl-top">${ava(a, 32)}<b class="ellip">${esc(a.name)}</b><span>${rel(p.created_at)}</span>
+      <button class="icon-btn sl-more" data-act="post-menu" data-id="${p.id}" aria-label="メニュー">${I.more}</button></div>
+    <div class="sl-art">${art(p)}
+      <span class="listen-ring xl ${needListen ? '' : 'done'}" data-ring="${p.id}" style="--mc:${mo.c}">${playBtn(p) || ''}</span></div>
+    <div class="sl-meta"><div class="ti ellip">${esc(p.title)}</div><div class="ar ellip">${esc(p.artist)}</div></div>
+    <div class="sl-mood">${moodChip(p.mood)}</div>
+    <div class="sl-cm">${p.comment ? `<p class="cm-open">${esc(p.comment)}</p>` : needListen ? `<div class="cm-lock" data-lock="${p.id}">${I.headphones}<span>${p.preview_url ? '15秒聴くと、ひとことが開きます' : 'ひとことがあります'}</span></div>` : ''}</div>
+    <div class="sl-act">
+      <div class="reacts">${REACTS.map(e => `<button class="rx ${p.my_reaction === e ? 'on' : ''}" data-act="react" data-id="${p.id}" data-e="${e}">${rxInner(e, 0)}</button>`).join('')}</div>
+      ${isFriend ? `<div class="sl-btns"><button class="gift-btn" style="--mc:${mo.c}" data-act="gift" data-id="${esc(a.id)}" data-post="${p.id}">${I.gift} 曲を贈る</button><button class="sl-reply" data-act="chat" data-id="${esc(a.id)}">${I.chat} ことばを送る</button></div>` : ''}
+    </div>
+  </section>`;
+}
+function renderListen() {
+  const el = $('#t-listen'); const q = listenQueue();
+  const end = `<section class="slide end"><div class="sl-end">
+      ${q.length ? `<b>今日の空は、ここまで</b><p>聴いてもらえると、その人にちゃんと届きます。</p>` : `<b>まだ、とどいた曲がありません</b><p>フレンドが色をたすと、ここで1曲ずつ聴けます。</p>`}
+      ${postedToday().length ? `<button class="btn g" data-act="tab" data-tab="home">虹を見る</button>` : `<button class="btn p" data-act="compose">あなたの色をたす</button>`}
+      ${S.friends.length ? '' : `<button class="btn g" style="margin-top:8px" data-act="share-invite">${I.share} 招待リンクを送る</button>`}</div></section>`;
+  el.innerHTML = q.map(slideHTML).join('') + end;
+  watchSlides();
+}
+// スクロールして次の曲に来たら、再生中ならそのまま次を流す
+let slideIO = null;
+function watchSlides() {
+  slideIO?.disconnect();
+  slideIO = new IntersectionObserver(es => {
+    for (const e of es) {
+      if (!e.isIntersecting || e.intersectionRatio < .65) continue;
+      const p = S.posts.get(e.target.dataset.post); const st = music.player.state();
+      if (p && st.playing && st.song && !music.player.isCurrent(p) && listenQueue().some(x => music.player.isCurrent(x)) && p.preview_url) music.player.toggle(p);
+    }
+  }, { root: $('#t-listen'), threshold: [.65] });
+  $$('#t-listen .slide[data-post]').forEach(s => slideIO.observe(s));
+}
+function goListen(id) {
+  setTab('listen');
+  requestAnimationFrame(() => { const s = $(`#t-listen .slide[data-post="${id}"]`); if (s) $('#t-listen').scrollTo({ top: s.offsetTop, behavior: 'instant' }); });
+}
+
+// ═══════════════════════ INBOX（とどいた） ═══════════════════════
+const NOTIF_IC = {
+  gift: I.gift, listened: I.headphones, sync: I.spark, sync_mood: I.spark,
+  rain: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 15a4.5 4.5 0 1 1 .9-8.9A5.5 5.5 0 0 1 18.5 8 3.5 3.5 0 0 1 18 15z"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/></svg>',
+};
+const NOTIF_C = { gift: '#F29BB8', listened: '#8FD1B5', sync: '#F5C76B', sync_mood: '#F5C76B', rain: '#6FA0E6' };
+const stripEmoji = t => String(t || '').replace(/^[\p{Extended_Pictographic}️‍\s]+/u, '');
+function renderInbox() {
+  const el = $('#t-dm'); const tab = S.inbox || 'n';
+  const notifs = V8.notifs.filter(n => n.kind !== 'care');
+  let body;
+  if (tab === 'n') body = notifs.length ? notifs.map(n => `<button class="nt ${n.read_at ? '' : 'un'}" style="--mc:${NOTIF_C[n.kind] || '#B8C4D6'}" data-act="notif-go" data-url="${esc(n.url)}">
+        <span class="nt-ic">${NOTIF_IC[n.kind] || I.bell.replace('<svg', '<svg width="16" height="16"')}</span>
+        <span class="nt-tx"><b>${esc(stripEmoji(n.title))}</b>${n.body ? `<small class="ellip">${esc(n.body)}</small>` : ''}</span><span class="nt-tm">${rel(n.created_at)}</span></button>`).join('')
+      : `<div class="empty2"><b>まだ何もとどいていません</b><p>曲を贈ってもらったり、聴いてもらえたら、ここに届きます。</p></div>`;
+  else if (!S.loaded.threads) body = Array.from({ length: 4 }, () => `<div class="th"><div class="sk" style="width:50px;height:50px;border-radius:50%"></div><div style="flex:1"><div class="sk" style="width:35%;height:13px;margin-bottom:7px"></div><div class="sk" style="width:60%;height:11px"></div></div></div>`).join('');
+  else if (!S.threads.length) body = `<div class="empty2"><b>メッセージはフレンドとだけ</b><p>招待コードを交換した相手とだけ話せます。知らない人からは届きません。</p></div>`;
+  else body = S.threads.map(t => {
+    const l = t.last; const un = +t.unread || 0;
+    const pv = !l ? 'ことばを送ってみよう' : (l.mine ? 'あなた: ' : '') + (l.song?.reaction ? `「${l.song.title}」にリアクション` : l.song && !l.body ? `曲：${l.song.title}` : l.body);
+    return `<div class="th" data-act="chat" data-id="${esc(t.peer.id)}">${ava(t.peer, 50)}<div class="info"><div class="nm ellip">${esc(t.peer.name)}</div><div class="pv ellip ${un ? 'un' : ''}">${esc(pv)}</div></div><div class="rt">${l ? `<div class="tm">${rel(l.created_at)}</div>` : ''}${un ? `<div class="cnt">${un}</div>` : ''}</div></div>`;
+  }).join('');
+  const nUn = notifs.filter(n => !n.read_at).length, mUn = S.threads.reduce((a, t) => a + (+t.unread || 0), 0);
+  el.innerHTML = `<div class="hd"><h1>とどいた</h1><button class="icon-btn" data-act="gifts" aria-label="贈りもの">${I.gift.replace('width="15" height="15"', 'width="20" height="20"')}</button></div>
+    <div style="padding:0 16px 10px"><div class="seg"><button class="${tab === 'n' ? 'on' : ''}" data-act="inbox-tab" data-k="n">おしらせ${nUn ? ` <i class="dot"></i>` : ''}</button><button class="${tab === 'm' ? 'on' : ''}" data-act="inbox-tab" data-k="m">メッセージ${mUn ? ` <i class="dot"></i>` : ''}</button></div></div>
+    <div class="inbox">${body}</div><div style="height:100px"></div>`;
+  if (tab === 'n' && nUn && S.tab === 'dm') api.readNotifications().then(() => { V8.notifs.forEach(n => n.read_at ||= new Date().toISOString()); badges(); }).catch(() => {});
 }
 
 // pull to refresh
@@ -330,76 +428,14 @@ function renderHome() {
 // ═══════════════════════ COMPOSER ═══════════════════════
 const C = { song: null, mood: null, comment: '', pub: false, results: [], q: '', ctrl: null, ai: { q: '', loading: false, songs: [], err: '', left: null } };
 function openComposer(prefill) {
-  if (!leftToday()) { toast('今日はもう3回シェアしました。また明日！'); return; }
+  if (!leftToday()) { toast('今日はもう3回たしました。また明日'); return; }
   Object.assign(C, { song: prefill || null, mood: null, comment: '', pub: false, results: [], q: '', mx: null, my: null });
   C.ai = { q: '', loading: false, songs: [], err: '', left: C.ai?.left ?? null };
   openSheet(`<div id="cmp"></div>`, { full: true });
   renderComposer();
-  if (!prefill) setTimeout(() => $('#cmp-q')?.focus(), 400);
 }
 function tintComposer() {
   const g = $('#cmp-glow'); if (g) g.style.backgroundColor = C.mood ? moodOf(C.mood).c : 'transparent';
-  const b = $('#cmp-go'); if (b) b.style.background = C.mood ? moodOf(C.mood).c : '';
-}
-function renderComposer() {
-  const ml = 0;
-  const ok = C.song && C.mood;
-  $('#cmp').innerHTML = `
-    <div id="cmp-glow" class="glow-top"></div>
-    <div class="row" style="padding:0 18px 10px;position:relative"><button class="faint" style="font-size:14px" data-act="close-sheet">キャンセル</button>
-      <div class="disp" style="flex:1;text-align:center;font-size:17px">今日の1曲</div>
-      <button class="btn p sm" id="cmp-go" ${ok ? '' : 'disabled'} data-act="post">シェア</button></div>
-    ${ml ? `<div class="moment" style="margin:0 18px 12px;padding:10px 14px"><div style="flex:1;font-size:13px;font-weight:700">⚡ hearmeの時間！ 今シェアすると「オンタイム」</div><div class="t" style="font-size:18px" data-countdown>${fmtLeft(ml)}</div></div>` : ''}
-    ${C.song ? `<div class="picked">${art(C.song, 56)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600">${esc(C.song.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(C.song.artist)}</div></div>${playBtn(C.song)}<button class="icon-btn" style="width:32px;height:32px" data-act="unpick" aria-label="選び直す">${I.x.replace('<svg', '<svg width="14" height="14"')}</button></div>`
-      : `<div class="ai-box"><div class="row" style="gap:8px;margin-bottom:10px"><span style="font-size:18px">✨</span><div style="flex:1"><div style="font-weight:700;font-size:14px">気分から選んでもらう</div><div class="faint" style="font-size:11.5px">今の気分をひとこと書くと、AIが3曲えらびます</div></div></div>
-         <div class="row" style="gap:8px"><input class="inp" id="ai-q" maxlength="100" placeholder="例：雨で少しさみしい" value="${esc(C.ai.q)}" enterkeyhint="go" autocomplete="off" style="height:44px;font-size:15px"><button class="btn p" style="height:44px;padding:0 16px" data-act="ai-go" ${C.ai.loading ? 'disabled' : ''}>${C.ai.loading ? '<span class="spin"></span>' : '提案'}</button></div>
-         <div id="ai-res">${aiResults()}</div>
-         <div class="faint" style="font-size:10.5px;margin-top:8px;line-height:1.5">入力した気分の文章は選曲のためAI（${LIVE ? 'Google Gemini' : 'デモ'}）に送られます。名前や学校など個人が分かることは書かないでね</div></div>
-         <div class="faint" style="text-align:center;font-size:12px;margin:10px 0 8px">または自分で探す</div>
-         <div class="srch">${I.search}<input id="cmp-q" placeholder="曲名・アーティスト名で検索" value="${esc(C.q)}" enterkeyhint="search" autocomplete="off"><span id="cmp-spin"></span></div>
-         <div id="cmp-res" style="padding-top:6px">${C.results.map((s, i) => `<div class="res" data-act="pick" data-i="${i}">${art(s)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(s.artist)}</div></div>${playBtn(s, 'dim')}</div>`).join('') ||
-           (C.q ? '' : `<div class="faint" style="padding:18px;font-size:13px;text-align:center">いま頭の中で流れている曲は？</div>`)}</div>`}
-    ${C.song ? `
-    <div class="sec" style="padding-top:20px"><span class="lbl">今の気分</span><span class="faint" style="font-size:11px">なぞる or えらぶ</span></div>
-    <div style="padding:0 18px 10px">${padHTML()}</div>
-    <div class="moods2">${RAINBOW_ORDER.map(e => { const l = MOODS.find(([x]) => x === e)[1]; const o = MOOD_META[e]; return `<button class="md2 ${C.mood === e + ' ' + l ? 'on' : ''}" style="--mc:${o.c}" data-act="mood" data-m="${e} ${l}"><i></i>${o.label}</button>`; }).join('')}</div>
-    <div class="sec" style="padding-top:20px"><span class="lbl">ひとこと（なくてもOK）</span><span class="faint" style="font-size:11px" id="cmp-n">${C.comment.length}/60</span></div>
-    <div style="padding:0 18px"><textarea class="inp" id="cmp-c" rows="2" maxlength="60" placeholder="この曲を選んだ理由とか">${esc(C.comment)}</textarea></div>
-    <div class="toggle" data-act="pubtoggle"><div style="flex:1"><div style="font-size:14px;font-weight:600">🌍 みんなにも匿名で届ける</div><div class="faint" style="font-size:12px;margin-top:2px">名前は出ません。知らない誰かが絵文字で反応してくれるかも</div></div><div class="sw ${C.pub ? 'on' : ''}"></div></div>
-    <div class="faint" style="text-align:center;font-size:12px;padding:6px 0 30px">今日はあと${leftToday()}回シェアできます</div>` : ''}`;
-  const q = $('#cmp-q');
-  if (q) q.oninput = () => { C.q = q.value; searchDebounced(); };
-  bindPad(); tintComposer();
-  const aq = $('#ai-q');
-  if (aq) { aq.oninput = () => { C.ai.q = aq.value; }; aq.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); askAI(); } }; }
-  const c = $('#cmp-c');
-  if (c) c.oninput = () => { C.comment = c.value; $('#cmp-n').textContent = `${c.value.length}/60`; };
-}
-function aiResults() {
-  const a = C.ai;
-  if (a.loading) return `<div style="padding-top:12px">${'<div class="sk" style="height:62px;margin-bottom:8px;border-radius:14px"></div>'.repeat(3)}<div class="faint" style="font-size:12px;text-align:center">あなたの気分に合う曲を探しています…（10秒ほどかかることがあります）</div></div>`;
-  if (a.err) return `<div class="faint" style="font-size:12.5px;padding-top:10px">${esc(a.err)}</div>`;
-  if (!a.songs.length) return '';
-  return `<div style="padding-top:10px">${a.songs.map((s, i) => `<div class="ai-song tap" data-act="ai-pick" data-i="${i}">${art(s, 52)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600;font-size:14px">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px">${esc(s.artist)}</div>${s.reason ? `<div style="font-size:12px;color:var(--cr2);margin-top:3px">💬 ${esc(s.reason)}</div>` : ''}</div>${playBtn(s, 'dim')}</div>`).join('')}
-    <div class="row" style="justify-content:space-between;padding:4px 2px 0"><span class="faint" style="font-size:11px">${a.left != null ? `今日はあと${a.left}回` : ''}${LIVE ? '' : ' · デモ'}</span><button class="faint" style="font-size:12px;padding:6px" data-act="ai-go">↻ ほかの曲</button></div></div>`;
-}
-async function askAI() {
-  const text = (C.ai.q || '').trim();
-  if (!text) { toast('今の気分をひとこと書いてね'); $('#ai-q')?.focus(); return; }
-  if (C.ai.loading) return;
-  $('#ai-q')?.blur();
-  C.ai.loading = true; C.ai.err = ''; renderAI();
-  try {
-    const r = await api.recommend(text);
-    C.ai.songs = r.songs || []; C.ai.left = r.left ?? C.ai.left;
-    if (!C.ai.songs.length) C.ai.err = 'ぴったりの曲が見つかりませんでした。言い方を変えて試してね';
-    buzz(8);
-  } catch (e) { C.ai.err = errText(e); }
-  C.ai.loading = false; renderAI();
-}
-function renderAI() {
-  const r = $('#ai-res'); if (r) r.innerHTML = aiResults();
-  const b = $('[data-act="ai-go"].btn'); if (b) { b.disabled = C.ai.loading; b.innerHTML = C.ai.loading ? '<span class="spin"></span>' : '提案'; }
 }
 let sT;
 function searchDebounced() {
@@ -419,21 +455,24 @@ function refreshResults() {
 }
 async function submitPost() {
   if (!C.song || !C.mood) return;
-  const b = $('#cmp-go'); b.disabled = true; b.textContent = '送信中…';
+  const b = $('#cmp-go'); b.disabled = true; b.textContent = 'たしています…';
   try {
     await api.createPost({
       track_id: C.song.track_id || null, title: C.song.title.slice(0, 200), artist: (C.song.artist || '').slice(0, 200),
       artwork: ART_RE.test(C.song.artwork || '') ? C.song.artwork : null,
       preview_url: PREVIEW_RE.test(C.song.preview_url || '') ? C.song.preview_url : null,
       track_url: TRACK_RE.test(C.song.track_url || '') ? C.song.track_url : null,
-      mood: C.mood, comment: C.comment.trim().slice(0, 60), is_public: C.pub,
+      mood: C.mood, comment: C.comment.trim().slice(0, 60), is_public: false,
       ...(C.mx != null ? { mood_x: C.mx, mood_y: C.my } : {}),
     });
     const postedMood = C.mood;
-    buzz([10, 40, 10]); closeSheet(); toast(momentActive() ? '⚡ オンタイムでシェアしました！' : '🎵 シェアしました');
-    hideMoment(); setTab('home'); await loadFeeds();
-    setTimeout(() => sameMoodSheet(postedMood), 700);   // ③ 同じ気持ちの人
-  } catch (e) { toast(errText(e)); b.disabled = false; b.textContent = 'シェア'; }
+    buzz([10, 40, 10]); closeSheet();
+    S.justAdded = moodOf(postedMood).e;
+    $('#t-home').scrollTop = 0; if (S.tab !== 'home') setTab('home');
+    await loadFeeds();
+    toast('あなたの色が、今日の虹に加わりました', 3200);
+    setTimeout(() => { S.justAdded = null; }, 2500);
+  } catch (e) { toast(errText(e)); b.disabled = false; b.textContent = 'この色を、今日の虹にたす'; }
 }
 
 // ═══════════════════════ SONG DETAIL ═══════════════════════
@@ -500,18 +539,7 @@ function renderExploreKeep() {
 }
 
 // ═══════════════════════ DM LIST ═══════════════════════
-function renderDM() {
-  const el = $('#t-dm');
-  let body;
-  if (!S.loaded.threads) body = Array.from({ length: 4 }, () => `<div class="th"><div class="sk" style="width:50px;height:50px;border-radius:50%"></div><div style="flex:1"><div class="sk" style="width:35%;height:13px;margin-bottom:7px"></div><div class="sk" style="width:60%;height:11px"></div></div></div>`).join('');
-  else if (!S.threads.length) body = `<div class="empty"><span class="e-ic">💬</span><b>DMはフレンドとだけ</b>招待コードを交換した相手とだけメッセージできます。知らない人からは届きません。<div style="margin-top:16px"><button class="btn p sm" data-act="share-invite">${I.share} 招待リンクを送る</button></div></div>`;
-  else body = S.threads.map(t => {
-    const l = t.last; const un = +t.unread || 0;
-    const pv = !l ? 'メッセージを送ってみよう' : (l.mine ? 'あなた: ' : '') + (l.song && !l.body ? '🎵 曲を送りました' : (l.song ? '🎵 ' : '') + l.body);
-    return `<div class="th" data-act="chat" data-id="${esc(t.peer.id)}">${ava(t.peer, 52)}<div class="info"><div class="nm ellip">${esc(t.peer.name)}</div><div class="pv ellip ${un ? 'un' : ''}">${esc(pv)}</div></div><div class="rt">${l ? `<div class="tm">${rel(l.created_at)}</div>` : ''}${un ? `<div class="cnt">${un}</div>` : ''}</div></div>`;
-  }).join('');
-  el.innerHTML = `<div class="hd"><h1>メッセージ</h1><button class="icon-btn" data-act="add-friend" aria-label="フレンド追加">${I.userplus}</button></div>${body}<div style="height:90px"></div>`;
-}
+function renderDM() { renderInbox(); }
 
 // ═══════════════════════ CHAT ═══════════════════════
 async function openChat(peerId) {
@@ -624,33 +652,102 @@ function streak() {
 }
 function renderMe() {
   const el = $('#t-me'); const p = S.profile || {};
+  const d0 = new Date(); const ym = d0.getFullYear() * 12 + d0.getMonth();
+  const month = S.mine.filter(x => { const t = new Date(x.created_at); return t.getFullYear() * 12 + t.getMonth() === ym; }).slice().reverse();
+  const cols = month.map(x => moodOf(x.mood).c);
+  const strip = cols.length ? (cols.length === 1 ? cols[0] : `linear-gradient(90deg, ${cols.map((c, i) => `${c} ${Math.round(i / (cols.length - 1) * 100)}%`).join(', ')})`) : 'var(--s2)';
+  const days = new Set(month.map(x => dayKey(x.created_at))).size;
   const cal = [];
   for (let i = 13; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
     const ps = S.mine.filter(x => dayKey(x.created_at) === dayKey(d));
-    const e = ps.length ? splitMood(ps[ps.length - 1].mood)[0] : '';
-    cal.push(`<div class="${i === 0 ? 'today' : ''}" style="${e ? `background:${MOOD_COLOR[e] || '#e9e4d8'}22` : ''}">${esc(e)}<small>${d.getDate()}</small></div>`);
+    const c = ps.length ? moodOf(ps[0].mood).c : '';
+    cal.push(`<span class="cd ${i === 0 ? 'today' : ''}" ${c ? `style="--mc:${c}"` : ''}><i></i><small>${d.getDate()}</small></span>`);
   }
   el.innerHTML = `
     <div class="glow-top me-glow"></div>
     <div class="hd"><h1>じぶん</h1><button class="icon-btn" data-act="settings" aria-label="設定">${I.gear}</button></div>
-    <div class="ph">${ava(p, 92)}<div class="nm">${esc(p.name)}</div>${p.bio ? `<div class="bio">${esc(p.bio)}</div>` : ''}
-      <button class="code" data-act="copy-code">${esc(p.code || '------')} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div>
-    <div style="display:flex;gap:8px;padding:0 16px 14px"><button class="btn p" style="flex:1.4 1 0;min-width:0;height:44px;font-size:14px;padding:0 10px" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g" style="flex:1 1 0;min-width:0;height:44px;font-size:14px;padding:0 10px" data-act="add-friend">コードで追加</button></div>
-    ${api.user()?.anonymous && S.mine.length ? `<div class="demo" data-act="settings" style="cursor:pointer">🔐 今は匿名アカウントです。機種変更やブラウザのデータ削除で消えないよう、<b>メールを登録</b>しておこう →</div>` : ''}
-    <div class="card stats"><div><b>${S.mine.length}</b><small>シェア</small></div><div><b>${S.friends.length}</b><small>フレンド</small></div><div><b>${monthColors().length}</b><small>今月の色</small>${monthColors().length ? `<i class="mc-dots">${monthColors().map(e => `<i style="background:${MOOD_META[e].c}"></i>`).join('')}</i>` : ''}</div></div>
-    <div class="me-grid">
-      <button class="me-tile" data-act="recap"><span>🗓</span><b>今月のきもち</b><small>ふり返り・画像に</small></button>
-      <button class="me-tile" data-act="letters"><span>💌</span><b>未来の自分へ</b><small>曲を手紙にして送る</small></button>
-      <button class="me-tile" data-act="notes"><span>📓</span><b>交換ノート</b><small>2人だけで1日1曲</small></button>
-      <button class="me-tile" data-act="gifts"><span>🎁</span><b>贈りもの</b><small>届いた曲・贈った曲</small></button>
+    <div class="ph">${ava(p, 88)}<div class="nm">${esc(p.name)}</div>${p.bio ? `<div class="bio">${esc(p.bio)}</div>` : ''}</div>
+    <div class="mycode"><button class="code" data-act="copy-code" aria-label="コードをコピー"><small>あなたのコード</small>${esc(p.code || '------')}</button>
+      <div class="mycode-b"><button class="btn p" data-act="share-invite">${I.share} 招待する</button><button class="btn g" data-act="add-friend">コードで追加</button></div></div>
+    ${api.user()?.anonymous && S.mine.length ? `<button class="notice" data-act="settings"><b>メールを登録しておこう</b><small>機種変更やデータ削除で、色の記録が消えないように</small>${I.back.replace('<svg', '<svg style="transform:rotate(180deg)"')}</button>` : ''}
+    <div class="card mcol">
+      <div class="mcol-hd"><b>${d0.getMonth() + 1}月の色</b><span>${days ? `${days}日分のきもち` : 'まだ色がありません'}</span></div>
+      <div class="mcol-strip" style="background:${strip}"></div>
+      <div class="cal2">${cal.join('')}</div>
+      ${month.length >= 3 ? `<button class="mcol-go" data-act="recap">${I.spark} この月をふり返る</button>` : ''}
     </div>
-    <div class="card box"><h3>きもちログ（2週間）</h3><div class="cal">${cal.join('')}</div></div>
-    ${S.activity.length ? `<div class="card box"><h3>届いたリアクション</h3>${S.activity.slice(0, 8).map(a => `<div class="li">${ava(a.who, 34)}<div style="flex:1;min-width:0;font-size:13px"><b>${esc(a.who?.name)}</b> が <span class="ellip">「${esc(a.post?.title)}」</span>に ${esc(a.emoji)}</div><div class="faint" style="font-size:11px">${rel(a.created_at)}</div></div>`).join('')}</div>` : ''}
-    <div class="card box"><h3>フレンド（${S.friends.length}）</h3>${S.friends.length ? S.friends.map(f => `<div class="li">${ava(f, 42)}<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px" class="ellip">${esc(f.name)}</div><div class="faint ellip" style="font-size:12px">${f.last_post ? `🎵 ${esc(f.last_post.title)} · ${rel(f.last_post.created_at)}` : esc(f.bio || 'まだシェアなし')}</div></div><button class="btn g sm" data-act="chat" data-id="${esc(f.id)}">DM</button><button class="icon-btn" style="width:32px;height:32px;background:none;border:none" data-act="friend-menu" data-id="${esc(f.id)}">${I.more}</button></div>`).join('') : `<div class="faint" style="font-size:13px">まだいません。招待リンクを送ってみよう</div>`}</div>
-    <div class="sec"><span class="lbl">シェアした曲</span></div>
-    ${S.mine.length ? S.mine.map(x => `<div class="res" data-act="open-post" data-id="${x.id}">${art(x)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(x.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(x.artist)}</div></div><div style="text-align:right"><div style="font-size:18px">${esc(splitMood(x.mood)[0])}</div><div class="faint" style="font-size:10.5px">${rel(x.created_at)}</div></div></div>`).join('') : `<div class="empty" style="padding-top:20px"><span class="e-ic">🎵</span>まだシェアした曲はありません</div>`}
-    <div style="height:90px"></div>`;
+    <div class="sec2"><span>フレンド ${S.friends.length}</span></div>
+    <div class="card list">${S.friends.length ? S.friends.map(f => `<div class="li">${ava(f, 40)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600;font-size:14px">${esc(f.name)}</div><div class="faint ellip" style="font-size:12px;margin-top:2px">${f.last_post ? `${esc(f.last_post.title)} · ${rel(f.last_post.created_at)}` : 'まだ色がありません'}</div></div><button class="icon-btn sm" data-act="chat" data-id="${esc(f.id)}" aria-label="メッセージ">${I.chat}</button><button class="icon-btn sm" data-act="friend-menu" data-id="${esc(f.id)}" aria-label="メニュー">${I.more}</button></div>`).join('') : `<div class="faint" style="font-size:13px;padding:6px 2px">まだいません。招待してみよう</div>`}</div>
+    <div class="sec2"><span>あなたがたした色</span></div>
+    ${S.mine.length ? `<div class="card list">${S.mine.map(x => { const mo = moodOf(x.mood); return `<div class="li tap" data-act="open-post" data-id="${x.id}">${art(x, 44)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(x.title)}</div><div class="ellip faint" style="font-size:12px;margin-top:2px">${esc(x.artist)}</div></div><div class="my-m"><span class="mchip sm" style="--mc:${mo.c}"><i></i>${esc(mo.label)}</span><small>${rel(x.created_at)}</small></div></div>`; }).join('')}</div>`
+      : `<div class="empty2"><b>まだ色がありません</b><p>今日の気分と1曲をたすと、ここにたまっていきます。</p></div>`}
+    <div style="height:100px"></div>`;
+}
+
+// ═══════════════════════ COMPOSER（気分 → 曲 → たす） ═══════════════════════
+function renderComposer() {
+  const mo = C.mood ? moodOf(C.mood) : null;
+  const step = !C.mood ? 1 : !C.song ? 2 : 3;
+  const head = (title, left = 'キャンセル', act = 'close-sheet') => `<div class="cmp-hd"><button class="cmp-l" data-act="${act}">${left}</button><div class="cmp-t">${title}</div><span class="cmp-step">${step}/3</span></div>`;
+  let body;
+  if (step === 1) body = `${head('いまの気分は？')}
+    <p class="cmp-lead">言葉にしなくていい。いちばん近い色をえらんでね</p>
+    <div class="moodgrid">${RAINBOW_ORDER.map(e => { const l = MOODS.find(([x]) => x === e)[1]; const o = MOOD_META[e]; return `<button class="mg" style="--mc:${o.c}" data-act="mood" data-m="${e} ${l}"><i></i><b>${o.label}</b><small>${esc(o.name || '')}</small></button>`; }).join('')}</div>`;
+  else if (step === 2) body = `${head('その気分の1曲', '戻る', 'cmp-back')}
+    <button class="cmp-mood" data-act="cmp-back" style="--mc:${mo.c}"><i></i>${esc(mo.label)}<small>変える</small></button>
+    <div class="ai-box">
+      <div class="ai-hd">${I.spark}<b>AIにえらんでもらう</b></div>
+      <div class="row" style="gap:8px"><input class="inp" id="ai-q" maxlength="100" placeholder="ひとこと足すと、もっと合う（なくてOK）" value="${esc(C.ai.q)}" enterkeyhint="go" autocomplete="off"><button class="btn p ai-btn" data-act="ai-go" ${C.ai.loading ? 'disabled' : ''}>${C.ai.loading ? '<span class="spin"></span>' : 'えらぶ'}</button></div>
+      <div id="ai-res">${aiResults()}</div>
+      <div class="ai-note">気分の言葉は選曲のためAI（${LIVE ? 'Google Gemini' : 'デモ'}）に送られます。名前など個人が分かることは書かないでね</div></div>
+    <div class="or">または自分で探す</div>
+    <div class="srch">${I.search}<input id="cmp-q" placeholder="曲名・アーティスト名" value="${esc(C.q)}" enterkeyhint="search" autocomplete="off"><span id="cmp-spin"></span></div>
+    <div id="cmp-res" style="padding-top:6px">${C.results.map((s, i) => resRow(s, i)).join('')}</div>`;
+  else body = `${head('虹にたす', '戻る', 'unpick')}
+    <div class="cmp-final" style="--mc:${mo.c}">
+      <div class="cf-art">${art(C.song)}${playBtn(C.song)}</div>
+      <div class="cf-ti ellip">${esc(C.song.title)}</div><div class="cf-ar ellip">${esc(C.song.artist)}</div>
+      <button class="cmp-mood" data-act="cmp-back" style="--mc:${mo.c}"><i></i>${esc(mo.label)}<small>変える</small></button>
+    </div>
+    <div class="cf-c"><textarea class="inp" id="cmp-c" rows="2" maxlength="60" placeholder="ひとこと（なくてもOK）。聴いてくれた人にだけ開きます">${esc(C.comment)}</textarea><span id="cmp-n">${C.comment.length}/60</span></div>
+    <button class="go-big" id="cmp-go" data-act="post" style="--mc:${mo.c}">この色を、今日の虹にたす</button>`;
+  $('#cmp').innerHTML = `<div id="cmp-glow" class="glow-top"></div><div class="cmp-in">${body}</div>`;
+  const q = $('#cmp-q'); if (q) q.oninput = () => { C.q = q.value; searchDebounced(); };
+  const aq = $('#ai-q');
+  if (aq) { aq.oninput = () => { C.ai.q = aq.value; }; aq.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); askAI(); } }; }
+  const c = $('#cmp-c'); if (c) c.oninput = () => { C.comment = c.value; $('#cmp-n').textContent = `${c.value.length}/60`; };
+  tintComposer();
+}
+const resRow = (s, i) => `<div class="res" data-act="pick" data-i="${i}">${art(s)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(s.artist)}</div></div>${playBtn(s, 'dim')}</div>`;
+function aiResults() {
+  const a = C.ai;
+  if (a.loading) return `<div class="ai-wait"><span class="ai-dots" style="--mc:${C.mood ? moodOf(C.mood).c : '#ecebe7'}"><i></i><i></i><i></i></span>あなたの色に合う曲をさがしています</div>`;
+  if (a.err) return `<div class="faint" style="font-size:12.5px;padding-top:10px">${esc(a.err)}</div>`;
+  if (!a.songs.length) return '';
+  return `<div style="padding-top:10px">${a.songs.map((s, i) => `<div class="ai-song tap" data-act="ai-pick" data-i="${i}">${art(s, 52)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600;font-size:14px">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px">${esc(s.artist)}</div>${s.reason ? `<div class="ai-why">${esc(s.reason)}</div>` : ''}</div>${playBtn(s, 'dim')}</div>`).join('')}
+    <div class="row" style="justify-content:space-between;padding:4px 2px 0"><span class="faint" style="font-size:11px">${a.left != null ? `今日はあと${a.left}回` : ''}</span><button class="faint" style="font-size:12px;padding:8px" data-act="ai-go">ほかの曲</button></div></div>`;
+}
+async function askAI() {
+  if (C.ai.loading) return;
+  const mo = C.mood ? moodOf(C.mood) : null;
+  const extra = (C.ai.q || '').trim();
+  const text = [mo ? `気分は「${mo.label}」` : '', extra].filter(Boolean).join('。');
+  if (!text) { toast('気分をえらんでね'); return; }
+  $('#ai-q')?.blur();
+  C.ai.loading = true; C.ai.err = ''; renderAI();
+  try {
+    const r = await api.recommend(text);
+    C.ai.songs = r.songs || []; C.ai.left = r.left ?? C.ai.left;
+    remember2(C.ai.songs);
+    if (!C.ai.songs.length) C.ai.err = 'ぴったりの曲が見つかりませんでした。ひとこと足して、もう一度ためしてね';
+    buzz(8);
+  } catch (e) { C.ai.err = errText(e); }
+  C.ai.loading = false; renderAI();
+}
+function renderAI() {
+  const r = $('#ai-res'); if (r) r.innerHTML = aiResults();
+  const b = $('.ai-btn'); if (b) { b.disabled = C.ai.loading; b.innerHTML = C.ai.loading ? '<span class="spin"></span>' : 'えらぶ'; }
 }
 
 // ═══════════════════════ SETTINGS ═══════════════════════
@@ -685,7 +782,7 @@ function openSettings() {
       <div class="set-row" data-act="unblock"><div class="grow">ブロックをすべて解除</div></div>
       <div class="set-row"><div class="grow" style="font-size:13px;color:var(--tx2);line-height:1.7">・DMはフレンドどうしだけ<br>・「みんな」では名前が出ません<br>・困ったら投稿の「…」から通報・ブロック</div></div>
     </div>
-    ${!LIVE ? `<div class="set-title">デモ</div><div class="set-group"><div class="set-row" data-act="demo-moment"><div class="grow">⚡ hearmeの時間を試す</div></div><div class="set-row" data-act="demo-reset"><div class="grow">デモデータをリセット</div></div></div>` : ''}
+    ${!LIVE ? `<div class="set-title">デモ</div><div class="set-group"><div class="set-row" data-act="demo-reset"><div class="grow">デモデータをリセット</div></div></div>` : ''}
     <div class="set-title">hearme</div>
     <div class="set-group">
       <div class="set-row" data-act="contact"><div class="grow">お問い合わせ</div><span class="faint">›</span></div>
@@ -887,7 +984,9 @@ function songBySrc(src) {
 // ═══════════════════════ ACTIONS ═══════════════════════
 const A = {
   tab: el => setTab(el.dataset.tab),
-  mode: async el => { S.mode = el.dataset.m; buzz(5); renderHome(); if (S.mode === 'public' && !S.loaded.pub) await loadPublic(); },
+  listen: el => goListen(el.dataset.id),
+  'inbox-tab': el => { S.inbox = el.dataset.k; buzz(4); renderInbox(); if (S.inbox === 'm') refreshThreads(); },
+  'cmp-back': () => { if (C.song && C.mood) { C.mood = null; } else { C.mood = null; C.song = null; } C.ai.songs = []; C.ai.err = ''; buzz(4); renderComposer(); },
   compose: () => { hideMoment(); openComposer(); },
   'close-sheet': () => closeSheet(),
   'close-page': () => closePage(),
@@ -896,11 +995,11 @@ const A = {
   pick: el => { C.song = C.results[+el.dataset.i]; buzz(6); renderComposer(); },
   'ai-go': () => askAI(),
   'ai-pick': el => { C.song = C.ai.songs[+el.dataset.i]; buzz(6); renderComposer(); },
-  unpick: () => { C.song = null; renderComposer(); setTimeout(() => $('#cmp-q')?.focus(), 50); },
-  mood: el => { C.mood = el.dataset.m; buzz(5); $$('.md2').forEach(b => b.classList.toggle('on', b === el)); $('#cmp-go').disabled = !(C.song && C.mood); tintComposer(); },
+  unpick: () => { C.song = null; renderComposer(); },
+  mood: el => { C.mood = el.dataset.m; buzz(6); renderComposer(); },
   pubtoggle: el => { C.pub = !C.pub; el.querySelector('.sw').classList.toggle('on', C.pub); buzz(5); },
   post: () => submitPost(),
-  'open-post': el => openPost(el.dataset.id),
+  'open-post': el => { const p = S.posts.get(el.dataset.id); if (p && !p.mine && S.friends.some(f => f.id === p.author?.id)) goListen(p.id); else openPost(el.dataset.id); },
   'post-menu': el => postMenu(el.dataset.id),
   react: async el => {
     const p = S.posts.get(el.dataset.id); if (!p) return;
@@ -1041,14 +1140,7 @@ const subHead = (title, right = '') => `<div class="page-hd"><button class="back
 
 // ── 通知（受信箱） ──
 async function loadNotifs() { try { V8.notifs = await api.notifications(); } catch { /* v8.sql 未適用など */ } bell(); checkCare(); if (S.tab === 'home' && started) renderHome(); }
-function bell() { const n = V8.notifs.filter(x => !x.read_at && x.kind !== 'care').length; $$('.bell-badge').forEach(b => { b.textContent = n > 9 ? '9+' : n; b.classList.toggle('hide', !n); }); }
-function openInbox() {
-  const list = V8.notifs.filter(n => n.kind !== 'care');
-  openSheet(`<div style="padding:0 0 20px"><div class="disp" style="text-align:center;font-size:18px;margin-bottom:10px">おしらせ</div>
-    ${list.length ? list.map(n => `<div class="th" data-act="notif-go" data-url="${esc(n.url)}" style="${n.read_at ? '' : 'background:rgba(107,149,255,.06)'}"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:${n.read_at ? 500 : 700}">${esc(n.title)}</div>${n.body ? `<div class="pv ellip">${esc(n.body)}</div>` : ''}</div><div class="tm faint" style="font-size:11px">${rel(n.created_at)}</div></div>`).join('')
-      : `<div class="empty"><span class="e-ic">🔔</span>まだおしらせはありません</div>`}</div>`, { full: list.length > 6 });
-  api.readNotifications().then(() => { V8.notifs.forEach(n => n.read_at ||= new Date().toISOString()); bell(); }).catch(() => {});
-}
+function bell() { badges(); if (S.tab === 'dm' && started) renderInbox(); }
 function routeURL(url) {
   try { closeSheet(); handleDeepLink(new URL(url, location.origin).searchParams); } catch { /* */ }
 }
@@ -1117,16 +1209,20 @@ const LISTEN_SEC = 15;
 music.player.subscribe(st => {
   const s = st.song; const p = s?.id && S.posts.get(s.id);
   if (p && !p.mine) {
-    const ring = $(`[data-ring="${p.id}"]`); if (ring) ring.style.setProperty('--pct', `${Math.min(100, (st.t / LISTEN_SEC) * 100)}%`);
-    const lock = $(`[data-lock="${p.id}"] span`); if (lock && st.playing && st.t < LISTEN_SEC) lock.textContent = `あと${Math.ceil(LISTEN_SEC - st.t)}秒で、ひとことが開きます`;
+    $$(`[data-ring="${p.id}"]`).forEach(ring => ring.style.setProperty('--pct', `${Math.min(100, (st.t / LISTEN_SEC) * 100)}%`));
+    $$(`[data-lock="${p.id}"] span`).forEach(lock => { if (st.playing && st.t < LISTEN_SEC) lock.textContent = `あと${Math.ceil(LISTEN_SEC - st.t)}秒で、ひとことが開きます`; });
   }
   if (!st.playing || !p || p.mine || st.t < LISTEN_SEC || V8.listened.has(p.id)) return;
   V8.listened.add(p.id);
   api.markListened(p.id).then(r => {
     p.i_listened = true;
     if (r?.comment != null) p.comment = r.comment;
-    const card = $(`[data-post="${p.id}"]`);
-    if (card) { const tmp = document.createElement('div'); tmp.innerHTML = postCard(p); const n = tmp.firstElementChild; n.classList.add('unlocked'); card.replaceWith(n); }
+    $$(`.slide[data-post="${p.id}"]`).forEach(sl => {
+      const cm = sl.querySelector('.sl-cm'); if (cm) cm.innerHTML = p.comment ? `<p class="cm-open unlocked">${esc(p.comment)}</p>` : '';
+      sl.querySelector('.listen-ring')?.classList.add('done');
+    });
+    $$(`.post[data-post="${p.id}"]`).forEach(card => { const tmp = document.createElement('div'); tmp.innerHTML = postCard(p); const n = tmp.firstElementChild; n.classList.add('unlocked'); card.replaceWith(n); });
+    badges(); if (S.tab === 'home') renderHome();
     if (p.comment) buzz([8, 30, 8]);
   }).catch(() => { V8.listened.delete(p.id); });
 });
@@ -1145,7 +1241,7 @@ function rainbowHTML() {
   moods.forEach(m => add(m.e, m.n, MOOD_META[m.e]?.c || '#ccc', false));
   if (R.waiting) add('wait', R.waiting, 'rgba(236,235,231,.07)', true);
   const pick = S.rbPick;
-  const band = b => `<button class="rb-band ${b.dashed ? 'dash' : ''}" ${b.dashed ? 'tabindex="-1"' : `data-act="rb-pick" data-e="${b.key}"`} aria-label="${b.dashed ? 'まだの人' : esc(MOOD_META[b.key]?.label || '')}"
+  const band = b => `<button class="rb-band ${b.dashed ? 'dash' : ''} ${S.justAdded === b.key ? 'rb-new' : ''}" ${b.dashed ? 'tabindex="-1"' : `data-act="rb-pick" data-e="${b.key}"`} aria-label="${b.dashed ? 'まだの人' : esc(MOOD_META[b.key]?.label || '')}"
       style="left:${Rr - b.r}px;top:${cy - b.r}px;width:${b.r * 2}px;height:${b.r}px;border-width:${b.t}px ${b.t}px 0 ${b.t}px;border-color:${b.c};border-radius:${b.r}px ${b.r}px 0 0;opacity:${pick && pick !== b.key ? .3 : 1}"></button>`;
   const meE = R.me; const meC = meE ? MOOD_META[meE]?.c : null;
   const headline = people <= 1 ? 'まだ細い、あなたの虹' : people === 2 ? 'ふたりの虹' : `${people}人でつくる虹`;
@@ -1608,7 +1704,7 @@ function wireRealtime() {
   });
   api.on('reaction', async r => {
     const p = S.posts.get(r?.post_id);
-    if (p?.mine && r?.emoji) { toast(`${r.emoji} 「${p.title}」にリアクションが届きました`); buzz(8); }
+    if (p?.mine && r?.emoji) { toast(`「${p.title}」に${RX_META[r.emoji]?.l ? `「${RX_META[r.emoji].l}」が` : 'リアクションが'}届きました`); buzz(8); }
     await Promise.all([loadFeeds(), refreshMe()]);
   });
   let pT; api.on('post', () => { clearTimeout(pT); pT = setTimeout(loadFeeds, 600); });
@@ -1763,14 +1859,9 @@ function handleDeepLink(q) {
   else if (q.get('compose')) openComposer();
   else if (q.get('giftto')) giftSheet(q.get('giftto'), q.get('post') || null);
   else if (q.get('gift')) giftsPage();
-  else if (q.get('post')) { const p = S.posts.get(q.get('post')); if (p) openPost(p.id); }
-  else if (q.get('relay')) relayPage(q.get('relay'));
-  else if (q.get('letter')) lettersPage();
-  else if (q.get('note')) notePage(q.get('note'));
-  else if (q.get('pair')) pairPage(q.get('pair'));
+  else if (q.get('post')) { const p = S.posts.get(q.get('post')); if (p) { if (!p.mine) goListen(p.id); else openPost(p.id); } }
   else if (q.get('care')) careSheet();
-  else if (q.get('night')) nightPage();
-  else if (q.get('tab') && ['home', 'explore', 'dm', 'me'].includes(q.get('tab'))) setTab(q.get('tab'));
+  else if (q.get('tab')) { const t = { explore: 'listen', inbox: 'dm' }[q.get('tab')] || q.get('tab'); if (['home', 'listen', 'dm', 'me'].includes(t)) setTab(t); }
 }
 window.addEventListener('beforeunload', () => localStorage.setItem('hm_seen_act', S.seenActivity));
 ['scroll'].forEach(ev => addEventListener(ev, () => { if (scrollX || scrollY) scrollTo(0, 0); }));
