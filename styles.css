@@ -309,3 +309,8 @@ body.chat-open #mini{bottom:calc(var(--sab) + 76px);}
 
 .demo{margin:0 16px 12px;padding:10px 14px;border-radius:14px;background:rgba(255,176,48,.08);border:1px solid rgba(255,176,48,.25);color:var(--am);font-size:12px;line-height:1.6;}
 @media (min-width:600px){ #app,.sheet,.page,.ob{max-width:480px;margin:0 auto;} .sheet{left:50%;transform:translate(-50%,105%);width:100%;} .sheet.on{transform:translate(-50%,0);} }
+
+/* AI選曲 */
+.ai-box{margin:0 18px 4px;padding:14px;border-radius:20px;background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(107,149,255,.06));border:1px solid rgba(167,139,250,.28);}
+.ai-song{display:flex;align-items:center;gap:12px;padding:9px;border-radius:14px;background:rgba(7,7,8,.35);border:1px solid var(--ln);margin-bottom:7px;}
+.ai-song .art{width:52px;height:52px;border-radius:10px;}

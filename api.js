@@ -9,6 +9,9 @@ const ERR = {
   SELF_CODE: '自分のコードは追加できません',
   NOT_ALLOWED: 'この操作はできません',
   NOT_SIGNED_IN: 'ログインし直してください',
+  AI_LIMIT: '今日のAI選曲は上限に達しました。また明日！',
+  AI_BUSY: 'AIが混み合っています。少し待ってもう一度試してね',
+  AI_ERROR: 'AIがうまく答えられませんでした。言い方を変えて試してね',
 };
 export function errText(e) {
   const m = String(e?.message || e || '');
@@ -105,6 +108,17 @@ class LiveAPI {
   async react(postId, emoji) { return this._r(await this.sb.rpc('react', { p_post: postId, p_emoji: emoji })); }
   async activity() { return this._r(await this.sb.rpc('my_activity', { p_limit: 40 })) || []; }
   async todayMoment() { return this._r(await this.sb.rpc('today_moment')); }
+
+  // ── AI選曲（Edge Function recommend） ──
+  async recommend(text) {
+    const { data, error } = await this.sb.functions.invoke('recommend', { body: { text } });
+    if (error) {
+      let code = '';
+      try { code = (await error.context.json()).error; } catch { /* */ }
+      throw new Error(code || error.message);
+    }
+    return data;
+  }
 
   // ── DM ──
   async threads() { return this._r(await this.sb.rpc('dm_threads')) || []; }
@@ -273,6 +287,15 @@ class DemoAPI {
     }));
   }
   async todayMoment() { return this.db.moment ? { at: this.db.moment } : null; }
+  async recommend(text) {
+    // デモ：AIの代わりに決まった候補から選ぶ
+    const { search } = await import('./music.js');
+    const pool = [['夜に駆ける', 'YOASOBI', '夜の気分にそっと寄り添う'], ['マリーゴールド', 'あいみょん', 'やさしく背中を押してくれる'], ['白日', 'King Gnu', 'モヤモヤごと受け止めてくれる'], ['Pretender', 'Official髭男dism', 'せつなさに浸りたい日に'], ['水平線', 'back number', '静かに前を向ける一曲']];
+    const pick = pool.sort(() => Math.random() - .5).slice(0, 3);
+    const songs = [];
+    for (const [t, a, reason] of pick) { const [s] = await search(`${t} ${a}`, { limit: 3 }).catch(() => []); if (s) songs.push({ ...s, reason }); }
+    void text; return { songs, left: 9, provider: 'demo' };
+  }
   fireMoment() { this.db.moment = now(); this.save(); this.emit('moment', { at: this.db.moment }); }
   pairMsgs(peer) { return this.db.messages.filter(m => (m.sender === this.uid && m.receiver === peer) || (m.sender === peer && m.receiver === this.uid)); }
   async threads() {

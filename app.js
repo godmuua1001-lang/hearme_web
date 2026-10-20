@@ -286,10 +286,11 @@ function renderHome() {
 })();
 
 // ═══════════════════════ COMPOSER ═══════════════════════
-const C = { song: null, mood: null, comment: '', pub: false, results: [], q: '', ctrl: null };
+const C = { song: null, mood: null, comment: '', pub: false, results: [], q: '', ctrl: null, ai: { q: '', loading: false, songs: [], err: '', left: null } };
 function openComposer(prefill) {
   if (!leftToday()) { toast('今日はもう3回シェアしました。また明日！'); return; }
   Object.assign(C, { song: prefill || null, mood: null, comment: '', pub: false, results: [], q: '' });
+  C.ai = { q: '', loading: false, songs: [], err: '', left: C.ai?.left ?? null };
   openSheet(`<div id="cmp"></div>`, { full: true });
   renderComposer();
   if (!prefill) setTimeout(() => $('#cmp-q')?.focus(), 400);
@@ -303,7 +304,11 @@ function renderComposer() {
       <button class="btn p sm" id="cmp-go" ${ok ? '' : 'disabled'} data-act="post">シェア</button></div>
     ${ml ? `<div class="moment" style="margin:0 18px 12px;padding:10px 14px"><div style="flex:1;font-size:13px;font-weight:700">⚡ hearmeの時間！ 今シェアすると「オンタイム」</div><div class="t" style="font-size:18px" data-countdown>${fmtLeft(ml)}</div></div>` : ''}
     ${C.song ? `<div class="picked">${art(C.song, 56)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600">${esc(C.song.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(C.song.artist)}</div></div>${playBtn(C.song)}<button class="icon-btn" style="width:32px;height:32px" data-act="unpick" aria-label="選び直す">${I.x.replace('<svg', '<svg width="14" height="14"')}</button></div>`
-      : `<div class="srch">${I.search}<input id="cmp-q" placeholder="曲名・アーティスト名で検索" value="${esc(C.q)}" enterkeyhint="search" autocomplete="off"><span id="cmp-spin"></span></div>
+      : `<div class="ai-box"><div class="row" style="gap:8px;margin-bottom:10px"><span style="font-size:18px">✨</span><div style="flex:1"><div style="font-weight:700;font-size:14px">気分から選んでもらう</div><div class="faint" style="font-size:11.5px">今の気分をひとこと書くと、AIが3曲えらびます</div></div></div>
+         <div class="row" style="gap:8px"><input class="inp" id="ai-q" maxlength="100" placeholder="例：雨で少しさみしい" value="${esc(C.ai.q)}" enterkeyhint="go" autocomplete="off" style="height:44px;font-size:15px"><button class="btn p" style="height:44px;padding:0 16px" data-act="ai-go" ${C.ai.loading ? 'disabled' : ''}>${C.ai.loading ? '<span class="spin"></span>' : '提案'}</button></div>
+         <div id="ai-res">${aiResults()}</div></div>
+         <div class="faint" style="text-align:center;font-size:12px;margin:10px 0 8px">または自分で探す</div>
+         <div class="srch">${I.search}<input id="cmp-q" placeholder="曲名・アーティスト名で検索" value="${esc(C.q)}" enterkeyhint="search" autocomplete="off"><span id="cmp-spin"></span></div>
          <div id="cmp-res" style="padding-top:6px">${C.results.map((s, i) => `<div class="res" data-act="pick" data-i="${i}">${art(s)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(s.artist)}</div></div>${playBtn(s, 'dim')}</div>`).join('') ||
            (C.q ? '' : `<div class="faint" style="padding:18px;font-size:13px;text-align:center">いま頭の中で流れている曲は？</div>`)}</div>`}
     ${C.song ? `
@@ -315,8 +320,36 @@ function renderComposer() {
     <div class="faint" style="text-align:center;font-size:12px;padding:6px 0 30px">今日はあと${leftToday()}回シェアできます</div>` : ''}`;
   const q = $('#cmp-q');
   if (q) q.oninput = () => { C.q = q.value; searchDebounced(); };
+  const aq = $('#ai-q');
+  if (aq) { aq.oninput = () => { C.ai.q = aq.value; }; aq.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); askAI(); } }; }
   const c = $('#cmp-c');
   if (c) c.oninput = () => { C.comment = c.value; $('#cmp-n').textContent = `${c.value.length}/60`; };
+}
+function aiResults() {
+  const a = C.ai;
+  if (a.loading) return `<div style="padding-top:12px">${'<div class="sk" style="height:62px;margin-bottom:8px;border-radius:14px"></div>'.repeat(3)}<div class="faint" style="font-size:12px;text-align:center">あなたの気分に合う曲を探しています…</div></div>`;
+  if (a.err) return `<div class="faint" style="font-size:12.5px;padding-top:10px">${esc(a.err)}</div>`;
+  if (!a.songs.length) return '';
+  return `<div style="padding-top:10px">${a.songs.map((s, i) => `<div class="ai-song tap" data-act="ai-pick" data-i="${i}">${art(s, 52)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600;font-size:14px">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px">${esc(s.artist)}</div>${s.reason ? `<div style="font-size:12px;color:var(--cr2);margin-top:3px">💬 ${esc(s.reason)}</div>` : ''}</div>${playBtn(s, 'dim')}</div>`).join('')}
+    <div class="row" style="justify-content:space-between;padding:4px 2px 0"><span class="faint" style="font-size:11px">${a.left != null ? `今日はあと${a.left}回` : ''}${LIVE ? '' : ' · デモ'}</span><button class="faint" style="font-size:12px;padding:6px" data-act="ai-go">↻ ほかの曲</button></div></div>`;
+}
+async function askAI() {
+  const text = (C.ai.q || '').trim();
+  if (!text) { toast('今の気分をひとこと書いてね'); $('#ai-q')?.focus(); return; }
+  if (C.ai.loading) return;
+  $('#ai-q')?.blur();
+  C.ai.loading = true; C.ai.err = ''; renderAI();
+  try {
+    const r = await api.recommend(text);
+    C.ai.songs = r.songs || []; C.ai.left = r.left ?? C.ai.left;
+    if (!C.ai.songs.length) C.ai.err = 'ぴったりの曲が見つかりませんでした。言い方を変えて試してね';
+    buzz(8);
+  } catch (e) { C.ai.err = errText(e); }
+  C.ai.loading = false; renderAI();
+}
+function renderAI() {
+  const r = $('#ai-res'); if (r) r.innerHTML = aiResults();
+  const b = $('[data-act="ai-go"].btn'); if (b) { b.disabled = C.ai.loading; b.innerHTML = C.ai.loading ? '<span class="spin"></span>' : '提案'; }
 }
 let sT;
 function searchDebounced() {
@@ -724,7 +757,7 @@ function updateProgress() {
 }
 function songBySrc(src) {
   for (const p of S.posts.values()) if (p.preview_url === src) return p;
-  for (const s of [...S.chart, ...C.results, ...X.results]) if (s.preview_url === src) return s;
+  for (const s of [...S.chart, ...C.results, ...X.results, ...C.ai.songs]) if (s.preview_url === src) return s;
   for (const m of S.chat?.msgs || []) if (m.song?.preview_url === src) return m.song;
   const st = music.player.state(); if (st.song?.preview_url === src) return st.song;
   return null;
@@ -740,6 +773,8 @@ const A = {
   play: el => { const s = songBySrc(el.dataset.src); if (s) { buzz(5); music.player.toggle(s); } },
   stop: () => music.player.stop(),
   pick: el => { C.song = C.results[+el.dataset.i]; buzz(6); renderComposer(); },
+  'ai-go': () => askAI(),
+  'ai-pick': el => { C.song = C.ai.songs[+el.dataset.i]; buzz(6); renderComposer(); },
   unpick: () => { C.song = null; renderComposer(); setTimeout(() => $('#cmp-q')?.focus(), 50); },
   mood: el => { C.mood = el.dataset.m; buzz(5); $$('.md').forEach(b => b.classList.toggle('on', b === el)); $('#cmp-go').disabled = !(C.song && C.mood); },
   pubtoggle: el => { C.pub = !C.pub; el.querySelector('.sw').classList.toggle('on', C.pub); buzz(5); },
