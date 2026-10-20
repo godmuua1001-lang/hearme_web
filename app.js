@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '9.0.1';
+const VERSION = '9.1.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,12 +15,21 @@ const ART_RE = /^https:\/\/is\d+-ssl\.mzstatic\.com\//, PREVIEW_RE = /^https:\/\
 const safeImg = u => (typeof u === 'string' && (ART_RE.test(u) || /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(u))) ? u : null;
 const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+// 開いた日数（インストール案内を2日目から出すため）
+const launchDays = (() => { let n = 1; try { const t = new Date().toDateString(); const d = JSON.parse(localStorage.getItem('hm_days') || '[]'); if (!d.includes(t)) d.push(t); localStorage.setItem('hm_days', JSON.stringify(d.slice(-3))); n = d.length; } catch { /* */ } return () => n; })();
 
 const MOODS = [
   ['😊', '嬉しい'], ['😌', '穏やか'], ['🤩', 'アガる'], ['🔥', '熱い'], ['🥰', 'すき'],
   ['😢', '悲しい'], ['🥺', '寂しい'], ['😤', 'モヤモヤ'], ['😴', '眠い'], ['💭', '考え中'],
 ];
-const REACTS = ['❤️', '😢', '👏', '✨', '🫂', '🔥'];
+const REACTS = ['❤️', '🫂', '✨'];   // v9.1：3つにしぼって線のアイコン＋ことば（DBの値は絵文字のまま）
+const RX_META = {
+  '❤️': { l: 'すき', svg: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>' },
+  '🫂': { l: 'わかる', svg: '<path d="M4 13c2.5-1 5.5-1 8 1.5M20 13c-2.5-1-5.5-1-8 1.5"/><path d="M12 14.5V20M7 20h10"/><circle cx="12" cy="7" r="3"/>' },
+  '✨': { l: 'いいね', svg: '<path d="M12 4l1.7 4.8L18.5 10.5l-4.8 1.7L12 17l-1.7-4.8L5.5 10.5l4.8-1.7z"/>' },
+};
+const rxInner = (e, n) => { const m = RX_META[e]; return m ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${m.svg}</svg><span>${m.l}</span>${n ? `<b>${n}</b>` : ''}` : `${e}${n ? `<b>${n}</b>` : ''}`; };
+const rxOthers = p => { if (!p.mine) return ''; const n = Object.entries(p.reactions || {}).filter(([e]) => !REACTS.includes(e)).reduce((a, [, v]) => a + v, 0); return n ? `<span class="rx-more">ほか ${n}</span>` : ''; };
 // きもちの色：明るさをそろえ、虹の順（赤→橙→黄→緑→青→紫）に並べる
 const MOOD_META = {
   '🔥': { label: '熱い', name: 'ほのお', c: '#F07A7A' }, '🤩': { label: 'アガる', name: 'ゆうやけ', c: '#F59E6B' },
@@ -235,8 +244,8 @@ function postCard(p) {
   const needListen = !p.mine && p.has_comment && p.comment == null;
   const rx = REACTS.map(e => {
     const n = p.mine ? (p.reactions?.[e] || 0) : 0; const on = p.my_reaction === e;   // ⑤ 数字は本人にだけ
-    return `<button class="rx ${on ? 'on' : ''}" data-act="react" data-id="${p.id}" data-e="${e}">${e}${n ? `<b>${n}</b>` : ''}</button>`;
-  }).join('');
+    return `<button class="rx ${on ? 'on' : ''}" data-act="react" data-id="${p.id}" data-e="${e}">${rxInner(e, n)}</button>`;
+  }).join('') + rxOthers(p);
   const [me, ml] = splitMood(p.mood);
   return `<article class="post ${locked ? 'locked' : ''}" data-post="${p.id}">
     <div class="post-hd">${ava(a, 38)}<div class="who"><div class="nm ellip">${esc(p.mine ? 'あなた' : a.name)}</div>
@@ -274,7 +283,7 @@ function renderHome() {
       <button class="icon-btn" data-act="inbox" aria-label="おしらせ">${I.bell}<span class="badge bell-badge hide"></span></button>
       <button class="icon-btn" data-act="add-friend" aria-label="フレンド追加">${I.userplus}</button></div>
     <div class="ptr" id="ptr">↓ 引っ張って更新</div>
-    ${showInstallCard() ? `<div class="cta" style="background:rgba(233,228,216,.05);border-color:var(--ln2)"><div class="ic" style="background:var(--s3)"><img src="/icon-192.png" alt="" style="width:30px;border-radius:8px"></div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">アプリとして使う</div><div class="muted" style="font-size:11.5px;margin-top:2px">ホーム画面に追加すると通知も届きます</div></div><button class="btn p sm" data-act="install-app">追加</button><button class="faint" style="padding:6px" data-act="install-dismiss" aria-label="閉じる">✕</button></div>` : ''}
+    ${showInstallCard() ? `<div class="inst"><img src="/icon-192.png" alt=""><span>ホーム画面に追加すると、通知が届きます</span><button class="btn p sm" data-act="install-app">追加</button><button class="inst-x" data-act="install-dismiss" aria-label="閉じる">✕</button></div>` : ''}
     ${LIVE ? '' : `<div class="demo">🧪 デモモード：データはこの端末だけに保存されます。フレンド（ゆーき・みお）はお試し用です</div>`}
     ${rainbowHTML()}
     ${bannersHTML()}
@@ -427,7 +436,7 @@ function openPost(id) {
     <div class="card" style="margin:0 20px 14px;padding:14px">
       <div class="row">${ava(a, 36)}<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">${esc(p.mine ? 'あなた' : a.name)}</div><div class="faint" style="font-size:11.5px">${rel(p.created_at)} · ${esc(me)} ${esc(ml)}${p.on_time ? ' · <span class="ontime">⚡ オンタイム</span>' : ''}</div></div></div>
       ${p.comment ? `<div style="margin-top:10px;font-size:14.5px;line-height:1.65">「${esc(p.comment)}」</div>` : ''}
-      <div class="reacts">${REACTS.map(e => `<button class="rx ${p.my_reaction === e ? 'on' : ''}" data-act="react" data-id="${p.id}" data-e="${e}">${e}${p.reactions?.[e] ? `<b>${p.reactions[e]}</b>` : ''}</button>`).join('')}</div>
+      <div class="reacts">${REACTS.map(e => `<button class="rx ${p.my_reaction === e ? 'on' : ''}" data-act="react" data-id="${p.id}" data-e="${e}">${rxInner(e, p.mine ? p.reactions?.[e] : 0)}</button>`).join('')}${rxOthers(p)}</div>
     </div>
     ${canDM ? `<div style="padding:0 20px 12px"><div class="composer" style="border:none;padding:0;background:none"><textarea id="reply" rows="1" placeholder="${esc(a.name)}に返信…" maxlength="1000"></textarea><button class="send" data-act="reply" data-id="${p.id}" aria-label="送信">${I.send}</button></div><div class="faint" style="font-size:11.5px;margin-top:6px;padding-left:4px">この曲をつけてDMで送ります</div></div>` : ''}
     <div style="padding:4px 20px 24px;display:flex;gap:8px;flex-wrap:wrap">${p.mine ? `<button class="btn g sm" data-act="story-post" data-id="${p.id}">📸 ストーリーに</button><button class="btn g sm" data-act="same-mood" data-m="${esc(p.mood)}">同じ気持ちの人</button><button class="btn d sm" data-act="del-post" data-id="${p.id}">削除</button>`
@@ -586,6 +595,11 @@ function openSongPicker(onPick) {
 }
 
 // ═══════════════════════ ME ═══════════════════════
+function monthColors() {   // v9.1：連続日数のかわりに「今月つかった色」（義務感のない数字）
+  const d = new Date(), ym = d.getFullYear() * 12 + d.getMonth();
+  const es = [...new Set(S.mine.filter(p => { const t = new Date(p.created_at); return t.getFullYear() * 12 + t.getMonth() === ym; }).map(p => moodOf(p.mood).e || splitMood(p.mood)[0]))];
+  return RAINBOW_ORDER.filter(e => es.includes(e));
+}
 function streak() {
   const days = new Set(S.mine.map(p => dayKey(p.created_at)));
   let n = 0; const d = new Date();
@@ -609,7 +623,7 @@ function renderMe() {
       <button class="code" data-act="copy-code">${esc(p.code || '------')} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div>
     <div style="display:flex;gap:8px;padding:0 16px 14px"><button class="btn p" style="flex:1.4 1 0;min-width:0;height:44px;font-size:14px;padding:0 10px" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g" style="flex:1 1 0;min-width:0;height:44px;font-size:14px;padding:0 10px" data-act="add-friend">コードで追加</button></div>
     ${api.user()?.anonymous && S.mine.length ? `<div class="demo" data-act="settings" style="cursor:pointer">🔐 今は匿名アカウントです。機種変更やブラウザのデータ削除で消えないよう、<b>メールを登録</b>しておこう →</div>` : ''}
-    <div class="card stats"><div><b>${S.mine.length}</b><small>シェア</small></div><div><b>${S.friends.length}</b><small>フレンド</small></div><div><b>${streak()}</b><small>連続日数🔥</small></div></div>
+    <div class="card stats"><div><b>${S.mine.length}</b><small>シェア</small></div><div><b>${S.friends.length}</b><small>フレンド</small></div><div><b>${monthColors().length}</b><small>今月の色</small>${monthColors().length ? `<i class="mc-dots">${monthColors().map(e => `<i style="background:${MOOD_META[e].c}"></i>`).join('')}</i>` : ''}</div></div>
     <div class="me-grid">
       <button class="me-tile" data-act="recap"><span>🗓</span><b>今月のきもち</b><small>ふり返り・画像に</small></button>
       <button class="me-tile" data-act="letters"><span>💌</span><b>未来の自分へ</b><small>曲を手紙にして送る</small></button>
@@ -792,6 +806,7 @@ let deferredInstall = null;
 addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; if (S.tab === 'home' && started) renderHome(); });
 function showInstallCard() {
   if (standalone) return false;
+  if (launchDays() < 2) return false;   // v9.1：初日は出さない（まず虹を見てほしい）
   const d = +(localStorage.getItem('hm_install_dismiss') || 0);
   if (Date.now() - d < 7 * 86400000) return false;
   return !!deferredInstall || isIOS;
@@ -871,7 +886,7 @@ const A = {
     p.my_reaction = next; buzz(next ? 10 : 4);
     $$(`[data-act="react"][data-id="${p.id}"]`).forEach(b => {
       const em = b.dataset.e, n = p.reactions[em] || 0; b.classList.toggle('on', p.my_reaction === em);
-      b.innerHTML = `${em}${n ? `<b>${n}</b>` : ''}`; if (em === next) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+      b.innerHTML = rxInner(em, p.mine ? n : 0); if (em === next) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
     });
     try {
       await api.react(p.id, next);
