@@ -314,3 +314,11 @@ body.chat-open #mini{bottom:calc(var(--sab) + 76px);}
 .ai-box{margin:0 18px 4px;padding:14px;border-radius:20px;background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(107,149,255,.06));border:1px solid rgba(167,139,250,.28);}
 .ai-song{display:flex;align-items:center;gap:12px;padding:9px;border-radius:14px;background:rgba(7,7,8,.35);border:1px solid var(--ln);margin-bottom:7px;}
 .ai-song .art{width:52px;height:52px;border-radius:10px;}
+
+/* 同意・揺れ */
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--tx2);line-height:1.7;margin:0 2px 14px;text-align:left;}
+.consent input{width:20px;height:20px;margin-top:2px;accent-color:var(--cr);flex-shrink:0;}
+.consent a{color:var(--cr);}
+.consent small{font-size:11px;color:var(--tx3);}
+.shake{animation:shake .4s;}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}

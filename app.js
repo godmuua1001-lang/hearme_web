@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '7.0.0';
+const VERSION = '7.1.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -258,6 +258,7 @@ function renderHome() {
     <div class="hd"><div class="logo"><img src="/logo-mark.png" alt=""><span>hearme</span></div>
       <button class="icon-btn" data-act="add-friend" aria-label="フレンド追加">${I.userplus}</button></div>
     <div class="ptr" id="ptr">↓ 引っ張って更新</div>
+    ${showInstallCard() ? `<div class="cta" style="background:rgba(233,228,216,.05);border-color:var(--ln2)"><div class="ic" style="background:var(--s3)"><img src="/icon-192.png" alt="" style="width:30px;border-radius:8px"></div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">アプリとして使う</div><div class="muted" style="font-size:11.5px;margin-top:2px">ホーム画面に追加すると通知も届きます</div></div><button class="btn p sm" data-act="install-app">追加</button><button class="faint" style="padding:6px" data-act="install-dismiss" aria-label="閉じる">✕</button></div>` : ''}
     ${LIVE ? '' : `<div class="demo">🧪 デモモード：データはこの端末だけに保存されます。フレンド（ゆーき・みお）はお試し用です</div>`}
     ${ml ? `<div class="moment tap" data-act="compose"><div style="flex:1"><div style="font-weight:700;font-size:15px">⚡ hearmeの時間！</div><div class="muted" style="font-size:12px;margin-top:2px">みんな今、曲を選んでいます</div></div><div class="t" data-countdown>${fmtLeft(ml)}</div></div>` : ''}
     <div class="stories">
@@ -624,6 +625,9 @@ function openSettings() {
     ${!LIVE ? `<div class="set-title">デモ</div><div class="set-group"><div class="set-row" data-act="demo-moment"><div class="grow">⚡ hearmeの時間を試す</div></div><div class="set-row" data-act="demo-reset"><div class="grow">デモデータをリセット</div></div></div>` : ''}
     <div class="set-title">hearme</div>
     <div class="set-group">
+      <div class="set-row" data-act="contact"><div class="grow">お問い合わせ</div><span class="faint">›</span></div>
+      <a class="set-row" style="color:inherit;text-decoration:none" href="/terms.html" target="_blank" rel="noopener"><div class="grow">利用規約</div><span class="faint">↗</span></a>
+      <a class="set-row" style="color:inherit;text-decoration:none" href="/privacy.html" target="_blank" rel="noopener"><div class="grow">プライバシーポリシー</div><span class="faint">↗</span></a>
       <a class="set-row" style="color:inherit;text-decoration:none" href="https://hearme.readdy.co/" target="_blank" rel="noopener"><div class="grow">hearmeについて</div><span class="faint">↗</span></a>
       <div class="set-row" data-act="delete-me"><div class="grow" style="color:var(--rs)">アカウントを削除</div></div>
     </div>
@@ -725,6 +729,41 @@ function postMenu(id) {
     <button class="btn g w" data-act="report-post" data-id="${p.id}">🚩 この投稿を通報</button>
     <button class="btn d w" style="margin-top:8px" data-act="block-author" data-id="${p.id}">この人をブロック</button>
     <div class="faint" style="font-size:12px;text-align:center;margin-top:12px">ブロックすると、お互いの投稿が見えなくなります</div></div>`);
+}
+
+// ═══════════════════════ 通報・お問い合わせ ═══════════════════════
+let REPORT_TARGET = null;
+const REPORT_REASONS = ['いやがらせ・悪口', '性的・暴力的な内容', '個人情報の書き込み', '出会い目的・しつこい誘い', 'スパム・宣伝', 'その他'];
+function reportSheet(target) {
+  REPORT_TARGET = target;
+  openSheet(`<div style="padding:4px 18px 24px"><div class="disp" style="font-size:20px;text-align:center;margin-bottom:6px">通報する理由</div>
+    <div class="faint" style="font-size:12.5px;text-align:center;margin-bottom:14px">通報したことは相手に知られません</div>
+    ${REPORT_REASONS.map(r => `<button class="btn g w" style="margin-bottom:8px;justify-content:flex-start" data-act="report-send" data-r="${esc(r)}">${esc(r)}</button>`).join('')}
+    <div class="faint" style="font-size:12px;line-height:1.7;margin-top:6px">身の危険を感じたら、すぐに家族や先生、警察（#9110）に相談してね</div></div>`);
+}
+function contactSheet() {
+  openSheet(`<div style="padding:4px 20px 24px"><div class="disp" style="font-size:20px;text-align:center;margin-bottom:6px">お問い合わせ</div>
+    <div class="faint" style="font-size:12.5px;text-align:center;margin-bottom:14px">不具合・ご意見・ご要望など、なんでもどうぞ</div>
+    <textarea class="inp" id="ct-text" rows="5" maxlength="180" placeholder="例：DMの通知が届きません（iPhone）"></textarea>
+    <button class="btn p w" style="margin-top:10px" data-act="contact-send">送信</button>
+    <div class="faint" style="font-size:11.5px;margin-top:10px;line-height:1.6">返信が必要な場合は、設定からメールを登録しておいてください</div></div>`);
+  setTimeout(() => $('#ct-text')?.focus(), 350);
+}
+
+// ═══════════════════════ ホーム画面に追加 ═══════════════════════
+let deferredInstall = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; if (S.tab === 'home' && started) renderHome(); });
+function showInstallCard() {
+  if (standalone) return false;
+  const d = +(localStorage.getItem('hm_install_dismiss') || 0);
+  if (Date.now() - d < 7 * 86400000) return false;
+  return !!deferredInstall || isIOS;
+}
+function installGuide() {
+  openSheet(`<div style="padding:4px 22px 26px"><div class="disp" style="font-size:20px;text-align:center;margin-bottom:14px">ホーム画面に追加</div>
+    ${isIOS ? `<div class="card" style="padding:16px;font-size:14px;line-height:2">① 画面下の共有ボタン <b>⬆︎</b> をタップ<br>② 「<b>ホーム画面に追加</b>」を選ぶ<br>③ 右上の「<b>追加</b>」をタップ</div>
+      <div class="faint" style="font-size:12.5px;margin-top:12px;line-height:1.7">Safariで開いているときだけ追加できます。追加したアイコンから開くと、通知も受け取れます</div>`
+      : `<div class="card" style="padding:16px;font-size:14px;line-height:2">ブラウザのメニュー（︙）から「<b>アプリをインストール</b>」または「<b>ホーム画面に追加</b>」を選んでください</div>`}</div>`);
 }
 
 // ═══════════════════════ MOMENT ═══════════════════════
@@ -850,8 +889,25 @@ const A = {
     await api.blockPostAuthor(el.dataset.id).catch(e => toast(errText(e)));
     toast('ブロックしました'); await Promise.all([loadFriends(), loadFeeds()]);
   },
-  'report-post': async el => { await api.report({ postId: el.dataset.id, reason: 'post' }).catch(() => {}); closeSheet(); toast('通報しました。ありがとう'); },
-  'report-user': async el => { await api.report({ userId: el.dataset.id, reason: 'user' }).catch(() => {}); closeSheet(); toast('通報しました。ありがとう'); },
+  'report-post': el => reportSheet({ postId: el.dataset.id }),
+  'report-user': el => reportSheet({ userId: el.dataset.id }),
+  'report-send': async el => {
+    const t = REPORT_TARGET; if (!t) return; el.disabled = true;
+    try { await api.report({ ...t, reason: el.dataset.r }); closeSheet(); toast('通報しました。確認して対応します'); }
+    catch (e) { toast(errText(e)); el.disabled = false; }
+  },
+  contact: () => contactSheet(),
+  'contact-send': async el => {
+    const v = ($('#ct-text')?.value || '').trim(); if (v.length < 5) { toast('内容を5文字以上で書いてね'); return; }
+    el.disabled = true;
+    try { await api.report({ reason: ('[問い合わせ] ' + v).slice(0, 200) }); closeSheet(); toast('送信しました。ありがとう！'); }
+    catch (e) { toast(errText(e)); el.disabled = false; }
+  },
+  'install-app': async () => {
+    if (deferredInstall) { deferredInstall.prompt(); const r = await deferredInstall.userChoice.catch(() => null); deferredInstall = null; if (r?.outcome === 'accepted') toast('🎉 ホーム画面に追加しました'); render(); }
+    else installGuide();
+  },
+  'install-dismiss': () => { try { localStorage.setItem('hm_install_dismiss', String(Date.now())); } catch { /* */ } render(); },
   settings: () => { resetEdit(); openSettings(); openPage('pg-settings'); },
   'pick-photo': async () => { const d = await pickPhoto(); if (d) { EDIT.avatar = d; openSettings(); } },
   'edit-emoji': el => { EDIT.emoji = el.dataset.e; EDIT.avatar = null; EDIT.name = $('#ed-name').value; EDIT.bio = $('#ed-bio').value; openSettings(); },
@@ -968,7 +1024,14 @@ function wireRealtime() {
 }
 
 // ═══════════════════════ ONBOARDING / AUTH ═══════════════════════
-const OB = { step: 'welcome', emoji: '🎧', avatar: null, name: '', bio: '' };
+const OB = { step: 'welcome', emoji: '🎧', avatar: null, name: '', bio: '', agree: false };
+const CONSENT_VER = '2026-10-20';
+function needConsent() {
+  OB.agree = !!$('#ob-agree')?.checked;
+  if (!OB.agree) { toast('利用規約とプライバシーポリシーへの同意が必要です'); $('.consent')?.classList.add('shake'); setTimeout(() => $('.consent')?.classList.remove('shake'), 500); return true; }
+  try { localStorage.setItem('hm_consent', CONSENT_VER); } catch { /* */ }
+  return false;
+}
 function showOB(step) { OB.step = step; $('#ob').classList.remove('hide'); renderOB(); }
 function renderOB() {
   const ob = $('#ob'); const st = OB.step;
@@ -976,6 +1039,7 @@ function renderOB() {
   if (st === 'welcome') {
     ob.innerHTML = `<div class="ob-inner"><div class="welcome"><img src="/logo-mark.png" alt=""><h1>hearme</h1><div class="tag">きもちを、音楽で届ける</div><div class="wave">${[5, 12, 20, 9, 24, 13, 6].map((h, i) => `<i style="height:${h}px;animation-delay:${i * .1}s"></i>`).join('')}</div>
       <div class="muted" style="font-size:13.5px;line-height:1.9;margin-top:34px">言葉にしにくい今日の気分を、1曲で。<br>フレンドと、静かにつながる場所。</div></div>
+      <label class="consent"><input type="checkbox" id="ob-agree" ${OB.agree ? 'checked' : ''}><span><b>13歳以上</b>で、<a href="/terms.html" target="_blank" rel="noopener">利用規約</a>と<a href="/privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>に同意します<br><small>18歳未満の方は保護者の同意を得てください</small></span></label>
       <button class="btn p w" style="height:54px" data-ob="start">はじめる</button>
       <button class="btn w" style="margin-top:6px;color:var(--tx2)" data-ob="login">アカウントをお持ちの方</button>
       ${pendingInvite() ? `<div class="faint" style="text-align:center;font-size:12px;margin-top:8px">🎟 招待コード ${esc(pendingInvite())} を受け取りました</div>` : ''}</div>`;
@@ -1046,10 +1110,11 @@ document.addEventListener('click', async e => {
   const el = e.target.closest('[data-ob]'); if (!el) return;
   const a = el.dataset.ob;
   if (a === 'start') {
+    if (needConsent()) return;
     el.disabled = true;
     try { if (!api.user()) S.user = await api.signInAnon(); showOB('profile'); }
     catch (err) { toast(errText(err)); el.disabled = false; }
-  } else if (a === 'login') showOB('login');
+  } else if (a === 'login') { if (needConsent()) return; showOB('login'); }
   else if (a === 'to-welcome') showOB('welcome');
   else if (a === 'google') api.google({ link: false }).catch(err => toast(errText(err)));
   else if (a === 'emoji') { OB.emoji = el.dataset.e; OB.avatar = null; OB.name = $('#ob-name').value; OB.bio = $('#ob-bio').value; renderOB(); }
@@ -1095,6 +1160,8 @@ async function startApp() {
 function handleDeepLink(q) {
   if (q.get('dm')) openChat(q.get('dm'));
   else if (q.get('moment')) { if (momentActive()) openComposer(); }
+  else if (q.get('compose')) openComposer();
+  else if (q.get('tab') && ['home', 'explore', 'dm', 'me'].includes(q.get('tab'))) setTab(q.get('tab'));
 }
 window.addEventListener('beforeunload', () => localStorage.setItem('hm_seen_act', S.seenActivity));
 ['scroll'].forEach(ev => addEventListener(ev, () => { if (scrollX || scrollY) scrollTo(0, 0); }));

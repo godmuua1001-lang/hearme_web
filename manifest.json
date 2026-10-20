@@ -1,7 +1,7 @@
 {
   "name": "hearme",
   "short_name": "hearme",
-  "description": "音楽で気持ちを届ける",
+  "description": "きもちを、音楽で届ける。今日の気分を1曲でシェアする、静かなSNS。",
   "lang": "ja",
   "start_url": "/",
   "scope": "/",
@@ -10,8 +10,53 @@
   "background_color": "#070708",
   "theme_color": "#070708",
   "icons": [
-    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-    {"src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/",
+  "categories": [
+    "music",
+    "social",
+    "lifestyle"
+  ],
+  "shortcuts": [
+    {
+      "name": "今日の1曲をシェア",
+      "short_name": "シェア",
+      "url": "/?compose=1",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "メッセージ",
+      "short_name": "DM",
+      "url": "/?tab=dm",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }
