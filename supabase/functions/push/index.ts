@@ -76,5 +76,14 @@ Deno.serve(async (req) => {
     });
     return Response.json({ sent });
   }
+  // ── アプリ内通知（贈り物・記念日・手紙・リレーなど） ──
+  if (body.kind === "notify" && body.record) {
+    const r = body.record;
+    if (!r.push) return Response.json({ sent: 0 });
+    const { data: subs } = await sb.from("push_subscriptions").select("endpoint,p256dh,auth").eq("user_id", r.user_id);
+    if (!subs?.length) return Response.json({ sent: 0 });
+    const sent = await send(subs, { title: r.title, body: r.body, url: r.url || "/", tag: `n-${r.kind}` });
+    return Response.json({ sent });
+  }
   return Response.json({ ok: true });
 });

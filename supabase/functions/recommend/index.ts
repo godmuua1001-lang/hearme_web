@@ -90,6 +90,42 @@ function parseIdeas(s: string): Idea[] {
   } catch { return []; }
 }
 
+const RECAP_SYSTEM = `あなたは、ユーザーの1ヶ月の「気分と曲の記録」をやさしくふり返る相棒です。
+出力はJSONのみ：{"title":"","summary":"","word":""}
+- title：その月を表す短いタイトル（12文字以内、例「雨のち、少し晴れ」）
+- summary：気分の流れと曲の傾向を、あたたかく2〜3文（120文字以内）。否定や診断はしない
+- word：来月の自分へのひとこと（25文字以内）`;
+async function recap(list: string) {
+  const prompt = `今月の記録：\n${list}`;
+  let raw = "";
+  if (PROVIDER === "anthropic") {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": Deno.env.get("ANTHROPIC_API_KEY") ?? "", "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: Deno.env.get("ANTHROPIC_MODEL") ?? "claude-haiku-4-5-20251001", max_tokens: 500, system: RECAP_SYSTEM, messages: [{ role: "user", content: prompt }] }),
+    });
+    if (r.status === 429) throw new Error("AI_BUSY");
+    raw = (await r.json())?.content?.map((c: { text?: string }) => c.text ?? "").join("") ?? "";
+  } else {
+    const key = Deno.env.get("GEMINI_API_KEY") ?? "";
+    for (const m of [Deno.env.get("GEMINI_MODEL"), "gemini-2.5-flash", "gemini-flash-latest"].filter(Boolean)) {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+        method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: RECAP_SYSTEM }] }, contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.8, responseMimeType: "application/json", maxOutputTokens: 500, thinkingConfig: { thinkingBudget: 0 } } }),
+      });
+      if (r.status === 429) throw new Error("AI_BUSY");
+      if (!r.ok) continue;
+      raw = (await r.json())?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+      break;
+    }
+  }
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error("AI_ERROR");
+  const j = JSON.parse(m[0]);
+  return { title: String(j.title ?? "").slice(0, 20), summary: String(j.summary ?? "").slice(0, 160), word: String(j.word ?? "").slice(0, 40) };
+}
+
 // ── iTunes で実在確認（AIの“でっちあげ曲”を除外） ──
 const norm = (s: string) => s.toLowerCase().normalize("NFKC").replace(/[\s'’"“”・\-–—!！?？.,、。()（）]/g, "");
 async function verify(i: Idea) {
@@ -145,6 +181,23 @@ Deno.serve(async (req) => {
   if (!u?.user) return json({ error: "NOT_SIGNED_IN" }, 401);
 
   const body = await req.json().catch(() => ({}));
+
+  // ── ④ 月末の「きもちの記録」：1ヶ月の気分と曲から、やさしいふり返りを書く ──
+  if (body.mode === "recap") {
+    const items = (Array.isArray(body.items) ? body.items : []).slice(0, 90)
+      .map((x: Record<string, unknown>) => `${String(x.day ?? "").slice(0, 10)} ${String(x.mood ?? "").slice(0, 12)} 「${String(x.title ?? "").slice(0, 60)}」${String(x.artist ?? "").slice(0, 40)}`);
+    if (!items.length) return json({ error: "EMPTY" }, 400);
+    const { error: le } = await admin.rpc("bump_ai_usage", { p_user: u.user.id, p_limit: DAILY_LIMIT });
+    if (le) return json({ error: le.message.includes("AI_LIMIT") ? "AI_LIMIT" : "USAGE_ERROR" }, le.message.includes("AI_LIMIT") ? 429 : 500);
+    try {
+      const out = await recap(items.join("\n"));
+      return json(out);
+    } catch (e) {
+      await admin.rpc("refund_ai_usage", { p_user: u.user.id }).then(() => {}, () => {});
+      return json({ error: (e as Error).message === "AI_BUSY" ? "AI_BUSY" : "AI_ERROR" }, 502);
+    }
+  }
+
   const text = String(body.text ?? "").trim().slice(0, 100);
   if (!text) return json({ error: "EMPTY" }, 400);
 
