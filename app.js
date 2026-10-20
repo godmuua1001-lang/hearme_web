@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '9.2.0';
+const VERSION = '9.2.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,21 +15,15 @@ const ART_RE = /^https:\/\/is\d+-ssl\.mzstatic\.com\//, PREVIEW_RE = /^https:\/\
 const safeImg = u => (typeof u === 'string' && (ART_RE.test(u) || /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(u))) ? u : null;
 const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-// ═══ 表示サイズ：機種の画面幅に合わせて自動で拡大縮小 ＋ 設定で「小さめ／ふつう／大きめ」 ═══
-const UI_SIZES = { s: 0.9, m: 1, l: 1.12 };
-let ZOOM = 1;
-function uiSize() { try { return localStorage.getItem('hm_ui') || 'm'; } catch { return 'm'; } }
-function applyZoom() {
-  const w = Math.min(screen.width || innerWidth, innerWidth);
-  const auto = w >= 600 ? 1 : Math.max(0.85, Math.min(1.08, w / 390));   // 390px（iPhone 15）を基準
-  const z = Math.round(auto * (UI_SIZES[uiSize()] || 1) * 100) / 100;
-  if (z === ZOOM && document.documentElement.style.zoom) return false;
-  ZOOM = z; document.documentElement.style.zoom = z === 1 ? '' : String(z);
-  document.documentElement.style.setProperty('--zoom', z);
-  return true;
+// 表示サイズ：v9.2の zoom 方式は iOS でスクロール・画面遷移が重くなったため廃止（小さい画面は CSS で調整）
+const ZOOM = 1;
+try { localStorage.removeItem('hm_ui'); } catch { /* */ }
+// キーボードが出たら、下から出る画面をキーボードの上に持ち上げる
+if (window.visualViewport) {
+  const vv = visualViewport;
+  const kb = () => { const h = Math.max(0, innerHeight - vv.height - vv.offsetTop); document.documentElement.style.setProperty('--kb', (h > 80 ? h : 0) + 'px'); };
+  vv.addEventListener('resize', kb); vv.addEventListener('scroll', kb);
 }
-applyZoom();
-let zoomT; addEventListener('resize', () => { clearTimeout(zoomT); zoomT = setTimeout(() => { if (applyZoom() && typeof render === 'function') render(); }, 200); });
 // 開いた日数（インストール案内を2日目から出すため）
 const launchDays = (() => { let n = 1; try { const t = new Date().toDateString(); const d = JSON.parse(localStorage.getItem('hm_days') || '[]'); if (!d.includes(t)) d.push(t); localStorage.setItem('hm_days', JSON.stringify(d.slice(-3))); n = d.length; } catch { /* */ } return () => n; })();
 
@@ -149,7 +143,9 @@ function openSheet(html, { full = false, onClose } = {}) {
   sheetClose = onClose || null;
 }
 function closeSheet() {
-  $('#sheet').classList.remove('on'); $('#sheet-bg').classList.remove('on');
+  const sh = $('#sheet'); sh.style.transition = ''; sh.style.transform = '';   // ドラッグ途中の位置で止まらないように
+  sh.classList.remove('on'); $('#sheet-bg').classList.remove('on');
+  document.activeElement?.blur?.();
   const f = sheetClose; sheetClose = null; f?.();
 }
 function confirmSheet({ title, text = '', ok = 'OK', danger = false }) {
@@ -168,6 +164,7 @@ function confirmSheet({ title, text = '', ok = 'OK', danger = false }) {
   let y0 = null, dy = 0; const sh = $('#sheet');
   sh.addEventListener('touchstart', e => {
     const body = $('#sheet-body');
+    if (e.target.closest('input,textarea,#mood-pad')) { y0 = null; return; }
     if (e.target.closest('.grab') || body.scrollTop <= 0) { y0 = e.touches[0].clientY; dy = 0; sh.style.transition = 'none'; }
   }, { passive: true });
   sh.addEventListener('touchmove', e => {
@@ -175,11 +172,13 @@ function confirmSheet({ title, text = '', ok = 'OK', danger = false }) {
     if (dy > 0 && ($('#sheet-body').scrollTop <= 0 || e.target.closest('.grab'))) sh.style.transform = `translateY(${dy}px)`;
     else if (dy < 0) { y0 = null; sh.style.transform = ''; sh.style.transition = ''; }
   }, { passive: true });
-  sh.addEventListener('touchend', () => {
+  const end = () => {
     if (y0 == null) return; sh.style.transition = '';
-    if (dy > 110) closeSheet(); else sh.style.transform = '';
-    y0 = null;
-  });
+    if (dy > 90) closeSheet(); else sh.style.transform = '';
+    y0 = null; dy = 0;
+  };
+  sh.addEventListener('touchend', end);
+  sh.addEventListener('touchcancel', () => { if (y0 == null) return; sh.style.transition = ''; sh.style.transform = ''; y0 = null; dy = 0; });
 })();
 
 // ═══════════════════════ PAGES (スワイプで戻る) ═══════════════════════
@@ -210,6 +209,7 @@ addEventListener('popstate', () => {
     if (x0 == null) return; dx = Math.max(0, e.touches[0].clientX - x0);
     pg.style.transform = `translateX(${dx}px)`;
   }, { passive: true });
+  document.addEventListener('touchcancel', () => { if (x0 == null) return; pg.style.transition = ''; pg.style.transform = ''; x0 = null; });
   document.addEventListener('touchend', () => {
     if (x0 == null) return; pg.style.transition = '';
     if (dx > 90) closePage(pg.id); else pg.style.transform = '';
@@ -677,8 +677,6 @@ function openSettings() {
     <div class="set-title">通知</div>
     <div class="set-group">
       <div class="set-row" data-act="toggle-push"><div class="grow">プッシュ通知<small>DM・贈りもの・シンクロ・フレンドの雨の日をお知らせ</small></div><div class="sw ${pushOn ? 'on' : ''}"></div></div>
-      <div class="set-row" style="cursor:default"><div class="grow">表示サイズ<small>機種の画面に合わせて自動で調整。さらに好みで変えられます</small></div></div>
-      <div style="padding:0 16px 12px"><div class="seg">${[['s', '小さめ'], ['m', 'ふつう'], ['l', '大きめ']].map(([k, t]) => `<button class="${uiSize() === k ? 'on' : ''}" data-act="ui-size" data-k="${k}">${t}</button>`).join('')}</div></div>
       <div class="set-row" data-act="share-rain"><div class="grow">雨の日をフレンドに知らせる<small>悲しい・さみしい・モヤモヤの日に「雨みたい」と届きます</small></div><div class="sw ${p?.share_rain !== false ? 'on' : ''}"></div></div>
       ${isIOS && !standalone ? `<div class="set-row"><div class="grow" style="font-size:13px;color:var(--tx2);line-height:1.6">iPhoneで通知を受け取るには、Safariの共有ボタン <b>⬆︎</b> →「<b>ホーム画面に追加</b>」して、ホーム画面のアイコンから開いてください</div></div>` : ''}
     </div>
@@ -762,13 +760,23 @@ function openAddFriend() {
   openSheet(`<div style="padding:4px 22px 26px">
     <div class="disp" style="font-size:22px;text-align:center">フレンドを追加</div>
     <div class="muted" style="font-size:13px;text-align:center;margin:6px 0 18px;line-height:1.6">招待コードを交換すると、お互いの曲が届き、DMができます</div>
-    <div class="row" style="gap:8px"><input class="inp" id="fc" maxlength="6" placeholder="6文字のコード" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em;font-family:var(--disp);font-size:20px;text-align:center"><button class="btn p" data-act="add-code" style="height:50px">追加</button></div>
+    <div class="row" style="gap:8px"><input class="inp" id="fc" inputmode="text" enterkeyhint="done" placeholder="ABC123" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" style="text-transform:uppercase;letter-spacing:.3em;font-family:var(--disp);font-size:24px;text-align:center;height:56px"><button class="btn p" data-act="add-code" id="fc-go" style="height:56px" disabled>追加</button></div>
+    <div class="faint" id="fc-hint" style="font-size:12px;text-align:center;margin-top:8px">6文字のコード、または招待リンクを貼り付け</div>
     <div class="card" style="margin-top:18px;padding:16px;text-align:center"><div class="faint" style="font-size:12px">あなたのコード</div><div class="bigcode" style="font-size:30px;margin:6px 0 12px">${esc(S.profile?.code)}</div>
       <button class="btn g w" data-act="share-invite" style="height:44px">${I.share} 招待リンクを送る</button></div></div>`);
-  setTimeout(() => $('#fc')?.focus(), 350);
+  const fc = $('#fc');
+  const norm = v => { const m = String(v).match(/[?&]inv=([A-Za-z0-9]{6})/); return (m ? m[1] : String(v)).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); };
+  fc.addEventListener('input', () => {
+    const c = norm(fc.value); if (fc.value !== c) fc.value = c;
+    $('#fc-go').disabled = c.length !== 6;
+    $('#fc-hint').textContent = c.length === 6 ? `「${c}」を追加します` : c.length ? `あと${6 - c.length}文字` : '6文字のコード、または招待リンクを貼り付け';
+  });
+  fc.addEventListener('keydown', e => { if (e.key === 'Enter' && norm(fc.value).length === 6) $('#fc-go').click(); });
+  setTimeout(() => fc.focus(), 350);
 }
 async function addByCode(code, { silent } = {}) {
-  code = (code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const m = String(code || '').match(/[?&]inv=([A-Za-z0-9]{6})/);
+  code = (m ? m[1] : (code || '')).toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (code.length !== 6) { toast('6文字のコードを入力してね'); return null; }
   try {
     const f = await api.addFriend(code); buzz([10, 30, 10]);
@@ -1439,10 +1447,6 @@ async function loadV8() { await Promise.all([loadNotifs(), loadRelays()]); if (S
 // ── アクション ──
 Object.assign(A, {
   'rb-pick': el => { S.rbPick = S.rbPick === el.dataset.e ? null : el.dataset.e; buzz(5); renderHome(); },
-  'ui-size': el => {
-    try { localStorage.setItem('hm_ui', el.dataset.k); } catch { /* */ }
-    applyZoom(); $$('[data-act="ui-size"]').forEach(b => b.classList.toggle('on', b === el)); render(); toast('表示サイズを変えました');
-  },
   'share-rain': async el => {
     const sw = el.querySelector('.sw'); const on = !sw.classList.contains('on');
     try { S.profile = await api.updateProfile({ share_rain: on }); sw.classList.toggle('on', on); toast(on ? '雨の日をフレンドに知らせます' : '雨の日は知らせません'); } catch (e) { toast(errText(e)); }

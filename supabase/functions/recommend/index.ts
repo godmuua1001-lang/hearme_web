@@ -18,10 +18,10 @@ const json = (d: unknown, status = 200) =>
 type Idea = { title: string; artist: string; reason: string };
 
 const SYSTEM = `あなたは日本の音楽にくわしい、やさしい選曲係です。
-ユーザーの「今の気分」に寄り添う曲を5曲選びます（よく知られた、確実に実在する曲を優先）。
+ユーザーの「今の気分」に寄り添う曲を6曲選びます（よく知られた、確実に実在する曲を優先）。
 ルール：
 - 実在する曲だけを選ぶ（曲名とアーティスト名は正式表記で）
-- 5曲はアーティストを分ける。J-POPを中心に、洋楽やインディーも1曲まで混ぜてよい
+- 6曲はアーティストを分ける。J-POPを中心に、洋楽やインディーも1曲まで混ぜてよい
 - reason は、その気分に寄り添う理由を25文字以内の日本語で、やさしい口調で
 - 出力はJSONのみ：{"songs":[{"title":"","artist":"","reason":""}]}`;
 
@@ -29,13 +29,14 @@ const SYSTEM = `あなたは日本の音楽にくわしい、やさしい選曲�
 async function askGemini(text: string): Promise<Idea[]> {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new Error("GEMINI_API_KEY not set");
-  const models = [Deno.env.get("GEMINI_MODEL"), "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"].filter(Boolean) as string[];
+  // 速さ優先：まず軽量モデル（flash-lite）、だめなら flash
+  const models = [Deno.env.get("GEMINI_MODEL"), "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"].filter(Boolean) as string[];
   let last = "";
   for (const m of models) {
     // 選曲に「考える時間」は不要なので thinking をオフにして速くする（未対応モデルなら外して再試行）
     let r: Response | null = null;
     for (const noThink of [true, false]) {
-      const generationConfig: Record<string, unknown> = { temperature: 0.9, responseMimeType: "application/json", maxOutputTokens: 900 };
+      const generationConfig: Record<string, unknown> = { temperature: 0.9, responseMimeType: "application/json", maxOutputTokens: 700 };
       if (noThink) generationConfig.thinkingConfig = { thinkingBudget: 0 };
       r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
         method: "POST",
@@ -45,7 +46,9 @@ async function askGemini(text: string): Promise<Idea[]> {
           contents: [{ role: "user", parts: [{ text: `今の気分：「${text}」` }] }],
           generationConfig,
         }),
-      });
+        signal: AbortSignal.timeout(9000),
+      }).catch(() => null);
+      if (!r) break;
       if (r.status !== 400) break;
     }
     if (!r) continue;
@@ -83,7 +86,7 @@ function parseIdeas(s: string): Idea[] {
   try {
     const arr = JSON.parse(m[0]).songs;
     return Array.isArray(arr)
-      ? arr.filter((x) => x?.title && x?.artist).slice(0, 5).map((x) => ({
+      ? arr.filter((x) => x?.title && x?.artist).slice(0, 6).map((x) => ({
           title: String(x.title).slice(0, 100), artist: String(x.artist).slice(0, 100), reason: String(x.reason ?? "").slice(0, 60),
         }))
       : [];
@@ -131,7 +134,7 @@ const norm = (s: string) => s.toLowerCase().normalize("NFKC").replace(/[\s'’"�
 async function verify(i: Idea) {
   const q = new URLSearchParams({ term: `${i.title} ${i.artist}`, media: "music", entity: "song", limit: "8", country: "JP", lang: "ja_jp" });
   try {
-    const r = await fetch(`https://itunes.apple.com/search?${q}`);
+    const r = await fetch(`https://itunes.apple.com/search?${q}`, { signal: AbortSignal.timeout(3500) });
     const d = await r.json();
     const want = norm(i.artist);
     const hit = (d.results ?? []).find((t: Record<string, string>) => {
@@ -171,6 +174,21 @@ function uniq<T extends { track_id: number; artist: string }>(list: (T | null)[]
   });
 }
 
+// 6曲を同時に確認し、3曲そろった時点で（残りを待たずに）返す
+function verifyFast(ideas: Idea[]): Promise<NonNullable<Awaited<ReturnType<typeof verify>>>[]> {
+  return new Promise((resolve) => {
+    const got: (Awaited<ReturnType<typeof verify>>)[] = []; let done = 0;
+    if (!ideas.length) return resolve([]);
+    ideas.forEach((i, k) => verify(i).then((v) => {
+      got[k] = v; done++;
+      const ok = uniq(got.filter(Boolean) as NonNullable<typeof v>[]);
+      // 先に並んでいる候補を優先：上位から3曲そろったら即返す
+      const prefixDone = ideas.slice(0, Math.min(ideas.length, 4)).every((_, j) => j in got);
+      if ((ok.length >= 3 && prefixDone) || done === ideas.length) resolve(ok);
+    }));
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method" }, 405);
@@ -206,12 +224,9 @@ Deno.serve(async (req) => {
   if (limErr) return json({ error: limErr.message.includes("AI_LIMIT") ? "AI_LIMIT" : "USAGE_ERROR" }, limErr.message.includes("AI_LIMIT") ? 429 : 500);
 
   try {
-    let songs = uniq(await Promise.all((await ask(text)).map(verify)));
-    // 実在する曲が3曲に満たなければ1回だけ聞き直す
-    if (songs.length < 3) {
-      const more = await Promise.all((await ask(text + "（有名で確実に実在する曲で）")).map(verify));
-      songs = uniq([...songs, ...more]);
-    }
+    let songs = await verifyFast(await ask(text));
+    // 1曲も実在確認できなかったときだけ聞き直す（待ち時間を短くするため）
+    if (!songs.length) songs = await verifyFast(await ask(text + "（有名で確実に実在する曲で）"));
     if (!songs.length) throw new Error("NO_SONGS");
     return json({ songs: songs.slice(0, 3), left: Math.max(0, DAILY_LIMIT - Number(used ?? 0)), provider: PROVIDER });
   } catch (e) {
