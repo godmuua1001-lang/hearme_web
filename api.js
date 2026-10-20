@@ -9,6 +9,7 @@ const ERR = {
   SELF_CODE: '自分のコードは追加できません',
   NOT_ALLOWED: 'この操作はできません',
   NOT_SIGNED_IN: 'ログインし直してください',
+  TOO_MANY_TRIES: '試行回数が多すぎます。しばらく時間をおいてね',
   AI_LIMIT: '今日のAI選曲は上限に達しました。また明日！',
   AI_BUSY: 'AIが混み合っています。少し待ってもう一度試してね',
   AI_ERROR: 'AIがうまく答えられませんでした。言い方を変えて試してね',
@@ -89,7 +90,11 @@ class LiveAPI {
   async deleteMe() { this._r(await this.sb.rpc('delete_me')); await this.signOut(); }
 
   // ── friends ──
-  async addFriend(code) { return this._r(await this.sb.rpc('add_friend', { p_code: code })); }
+  async addFriend(code) {
+    const d = this._r(await this.sb.rpc('add_friend', { p_code: code }));
+    if (d?.error) throw new Error(d.error);
+    return d;
+  }
   async removeFriend(id) { return this._r(await this.sb.rpc('remove_friend', { p_id: id })); }
   async friends() { return this._r(await this.sb.rpc('my_friends')) || []; }
   async blockUser(id) { return this._r(await this.sb.rpc('block_user', { p_id: id })); }

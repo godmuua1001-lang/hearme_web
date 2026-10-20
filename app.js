@@ -10,7 +10,9 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const buzz = (n = 8) => { try { navigator.vibrate?.(n); } catch { /* */ } };
-const safeImg = u => (typeof u === 'string' && (/^https:\/\//.test(u) || /^data:image\/(png|jpe?g|webp|gif);base64,/.test(u))) ? u : null;
+// 画像は Apple の配信元か、端末で縮小したアイコンだけ表示する
+const ART_RE = /^https:\/\/is\d+-ssl\.mzstatic\.com\//, PREVIEW_RE = /^https:\/\/audio-ssl\.itunes\.apple\.com\//, TRACK_RE = /^https:\/\/(music|itunes)\.apple\.com\//;
+const safeImg = u => (typeof u === 'string' && (ART_RE.test(u) || /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(u))) ? u : null;
 const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
@@ -90,7 +92,7 @@ function art(s, size, extra = '') {
   return `<div class="art" ${st}>${src ? `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">` : I.note}${extra}</div>`;
 }
 function playBtn(s, cls = '') {
-  if (!s?.preview_url) return '';
+  if (!s?.preview_url || !PREVIEW_RE.test(s.preview_url)) return '';
   const on = music.player.isCurrent(s) && music.player.state().playing;
   return `<button class="play ${cls}" data-act="play" data-src="${esc(s.preview_url)}" aria-label="試聴">${on ? I.pause : I.play}</button>`;
 }
@@ -306,7 +308,8 @@ function renderComposer() {
     ${C.song ? `<div class="picked">${art(C.song, 56)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600">${esc(C.song.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(C.song.artist)}</div></div>${playBtn(C.song)}<button class="icon-btn" style="width:32px;height:32px" data-act="unpick" aria-label="選び直す">${I.x.replace('<svg', '<svg width="14" height="14"')}</button></div>`
       : `<div class="ai-box"><div class="row" style="gap:8px;margin-bottom:10px"><span style="font-size:18px">✨</span><div style="flex:1"><div style="font-weight:700;font-size:14px">気分から選んでもらう</div><div class="faint" style="font-size:11.5px">今の気分をひとこと書くと、AIが3曲えらびます</div></div></div>
          <div class="row" style="gap:8px"><input class="inp" id="ai-q" maxlength="100" placeholder="例：雨で少しさみしい" value="${esc(C.ai.q)}" enterkeyhint="go" autocomplete="off" style="height:44px;font-size:15px"><button class="btn p" style="height:44px;padding:0 16px" data-act="ai-go" ${C.ai.loading ? 'disabled' : ''}>${C.ai.loading ? '<span class="spin"></span>' : '提案'}</button></div>
-         <div id="ai-res">${aiResults()}</div></div>
+         <div id="ai-res">${aiResults()}</div>
+         <div class="faint" style="font-size:10.5px;margin-top:8px;line-height:1.5">入力した気分の文章は選曲のためAI（${LIVE ? 'Google Gemini' : 'デモ'}）に送られます。名前や学校など個人が分かることは書かないでね</div></div>
          <div class="faint" style="text-align:center;font-size:12px;margin:10px 0 8px">または自分で探す</div>
          <div class="srch">${I.search}<input id="cmp-q" placeholder="曲名・アーティスト名で検索" value="${esc(C.q)}" enterkeyhint="search" autocomplete="off"><span id="cmp-spin"></span></div>
          <div id="cmp-res" style="padding-top:6px">${C.results.map((s, i) => `<div class="res" data-act="pick" data-i="${i}">${art(s)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(s.artist)}</div></div>${playBtn(s, 'dim')}</div>`).join('') ||
@@ -373,9 +376,9 @@ async function submitPost() {
   try {
     await api.createPost({
       track_id: C.song.track_id || null, title: C.song.title.slice(0, 200), artist: (C.song.artist || '').slice(0, 200),
-      artwork: safeImg(C.song.artwork) && C.song.artwork.startsWith('https://') ? C.song.artwork : null,
-      preview_url: C.song.preview_url?.startsWith('https://') ? C.song.preview_url : null,
-      track_url: C.song.track_url?.startsWith('https://') ? C.song.track_url : null,
+      artwork: ART_RE.test(C.song.artwork || '') ? C.song.artwork : null,
+      preview_url: PREVIEW_RE.test(C.song.preview_url || '') ? C.song.preview_url : null,
+      track_url: TRACK_RE.test(C.song.track_url || '') ? C.song.track_url : null,
       mood: C.mood, comment: C.comment.trim().slice(0, 60), is_public: C.pub,
     });
     buzz([10, 40, 10]); closeSheet(); toast(momentActive() ? '⚡ オンタイムでシェアしました！' : '🎵 シェアしました');
@@ -577,6 +580,7 @@ function renderMe() {
     <div class="ph">${ava(p, 92)}<div class="nm">${esc(p.name)}</div>${p.bio ? `<div class="bio">${esc(p.bio)}</div>` : ''}
       <button class="code" data-act="copy-code">${esc(p.code || '------')} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div>
     <div style="display:flex;gap:8px;padding:0 16px 14px"><button class="btn p" style="flex:1;height:44px;font-size:14px" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g" style="flex:1;height:44px;font-size:14px" data-act="add-friend">コードで追加</button></div>
+    ${api.user()?.anonymous && S.mine.length ? `<div class="demo" data-act="settings" style="cursor:pointer">🔐 今は匿名アカウントです。機種変更やブラウザのデータ削除で消えないよう、<b>メールを登録</b>しておこう →</div>` : ''}
     <div class="card stats"><div><b>${S.mine.length}</b><small>シェア</small></div><div><b>${S.friends.length}</b><small>フレンド</small></div><div><b>${streak()}</b><small>連続日数🔥</small></div></div>
     <div class="card box"><h3>きもちログ（2週間）</h3><div class="cal">${cal.join('')}</div></div>
     ${S.activity.length ? `<div class="card box"><h3>届いたリアクション</h3>${S.activity.slice(0, 8).map(a => `<div class="li">${ava(a.who, 34)}<div style="flex:1;min-width:0;font-size:13px"><b>${esc(a.who?.name)}</b> が <span class="ellip">「${esc(a.post?.title)}」</span>に ${esc(a.emoji)}</div><div class="faint" style="font-size:11px">${rel(a.created_at)}</div></div>`).join('')}</div>` : ''}

@@ -29,3 +29,10 @@
 - DM はフレンド（招待コードを交換した相手）どうしのみ。DBのRLSで強制
 - 「みんな」の投稿は匿名。作者IDは返さない（`public_feed()`）
 - ブロック・通報・アカウント削除あり。投稿は1日3回まで
+
+## 運用メモ（2026-10 セキュリティレビュー）
+- `supabase/security.sql`：招待コード総当たり対策（失敗1時間10回まで）、画像URLをAppleの配信元に限定、アイコン形式の制限、DM添付サイズ制限
+- `vercel.json`：セキュリティヘッダー（クリックジャッキング・MIME偽装対策など）
+- **通報の確認**：Supabase → Table Editor → `reports` を定期的に見る（対応したら該当投稿を削除／ユーザーをBAN）
+- **公開前にやること**：利用規約・プライバシーポリシー（AIにGemini無料枠を使う旨を明記）、匿名登録のCAPTCHA（Authentication → Attack Protection）
+- AI選曲：`supabase/ai.sql` ＋ Edge Function `recommend`（Secrets: `GEMINI_API_KEY`、任意で `AI_PROVIDER=anthropic` ＋ `ANTHROPIC_API_KEY`）
