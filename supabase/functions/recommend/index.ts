@@ -18,10 +18,10 @@ const json = (d: unknown, status = 200) =>
 type Idea = { title: string; artist: string; reason: string };
 
 const SYSTEM = `あなたは日本の音楽にくわしい、やさしい選曲係です。
-ユーザーの「今の気分」に寄り添う曲を3曲選びます。
+ユーザーの「今の気分」に寄り添う曲を5曲選びます（よく知られた、確実に実在する曲を優先）。
 ルール：
 - 実在する曲だけを選ぶ（曲名とアーティスト名は正式表記で）
-- 3曲はアーティストを分ける。J-POPを中心に、洋楽やインディーも1曲まで混ぜてよい
+- 5曲はアーティストを分ける。J-POPを中心に、洋楽やインディーも1曲まで混ぜてよい
 - reason は、その気分に寄り添う理由を25文字以内の日本語で、やさしい口調で
 - 出力はJSONのみ：{"songs":[{"title":"","artist":"","reason":""}]}`;
 
@@ -35,7 +35,7 @@ async function askGemini(text: string): Promise<Idea[]> {
     // 選曲に「考える時間」は不要なので thinking をオフにして速くする（未対応モデルなら外して再試行）
     let r: Response | null = null;
     for (const noThink of [true, false]) {
-      const generationConfig: Record<string, unknown> = { temperature: 0.9, responseMimeType: "application/json", maxOutputTokens: 600 };
+      const generationConfig: Record<string, unknown> = { temperature: 0.9, responseMimeType: "application/json", maxOutputTokens: 900 };
       if (noThink) generationConfig.thinkingConfig = { thinkingBudget: 0 };
       r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
         method: "POST",
@@ -67,7 +67,7 @@ async function askClaude(text: string): Promise<Idea[]> {
     headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({
       model: Deno.env.get("ANTHROPIC_MODEL") ?? "claude-haiku-4-5-20251001",
-      max_tokens: 600, temperature: 0.9, system: SYSTEM,
+      max_tokens: 900, temperature: 0.9, system: SYSTEM,
       messages: [{ role: "user", content: `今の気分：「${text}」` }],
     }),
   });
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
     let ideas = PROVIDER === "anthropic" ? await askClaude(text) : await askGemini(text);
     let songs = (await Promise.all(ideas.map(verify))).filter(Boolean);
     // 実在する曲が少なければ1回だけ聞き直す
-    if (songs.length < 2) {
+    if (songs.length < 3) {
       ideas = PROVIDER === "anthropic" ? await askClaude(text + "（有名で確実に実在する曲で）") : await askGemini(text + "（有名で確実に実在する曲で）");
       const more = (await Promise.all(ideas.map(verify))).filter(Boolean);
       const seen = new Set(songs.map((s) => s!.track_id));
