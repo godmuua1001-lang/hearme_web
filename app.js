@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '9.0.0';
+const VERSION = '9.0.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -454,7 +454,7 @@ function renderExplore() {
     <div class="srch" style="margin-bottom:6px">${I.search}<input id="ex-q" placeholder="曲・アーティストを探す" value="${esc(X.q)}" enterkeyhint="search" autocomplete="off">${X.q ? `<button data-act="ex-clear" class="faint" style="width:24px;height:24px">${I.x.replace('<svg', '<svg width="14" height="14"')}</button>` : ''}</div>
     ${X.q ? `<div style="padding-top:8px">${searchArea}</div>` : `
     <div class="sec" style="padding-top:20px"><span class="disp" style="font-size:18px">🇯🇵 いま日本で聴かれている曲</span></div>
-    ${S.loaded.chart ? `<div class="hero-chart">${top.map((s, i) => `<div class="hc"><div class="art" style="width:150px;height:150px">${safeImg(s.artwork) ? `<img src="${esc(s.artwork)}" alt="" loading="lazy">` : I.note}${playBtn(s)}<div style="position:absolute;left:10px;top:8px;font-family:var(--disp);font-weight:800;font-size:22px;text-shadow:0 2px 10px rgba(0,0,0,.6)">${i + 1}</div></div><div class="ti ellip">${esc(s.title)}</div><div class="ar ellip">${esc(s.artist)}</div><button class="btn g sm" style="margin-top:8px;width:100%" data-act="share-this" data-song="${songData(s)}">この曲でシェア</button></div>`).join('')}</div>
+    ${S.loaded.chart && !S.chart.length ? `<div class="empty" style="padding:28px 16px">ランキングを読み込めませんでした<div style="margin-top:12px"><button class="btn g sm" data-act="retry-chart">もう一度</button></div></div>` : S.loaded.chart ? `<div class="hero-chart">${top.map((s, i) => `<div class="hc"><div class="art" style="width:150px;height:150px">${safeImg(s.artwork) ? `<img src="${esc(s.artwork)}" alt="" loading="lazy">` : I.note}${playBtn(s)}<div style="position:absolute;left:10px;top:8px;font-family:var(--disp);font-weight:800;font-size:22px;text-shadow:0 2px 10px rgba(0,0,0,.6)">${i + 1}</div></div><div class="ti ellip">${esc(s.title)}</div><div class="ar ellip">${esc(s.artist)}</div><button class="btn g sm" style="margin-top:8px;width:100%" data-act="share-this" data-song="${songData(s)}">この曲でシェア</button></div>`).join('')}</div>
       <div style="padding-top:10px">${rest.map((s, i) => songRow(s, i, i + 11)).join('')}</div>`
       : `<div class="hero-chart">${'<div class="hc"><div class="sk" style="width:150px;height:150px;border-radius:18px"></div></div>'.repeat(3)}</div>`}
     <div class="faint" style="font-size:11px;text-align:center;padding:16px">ランキング・試聴：Apple Music / iTunes</div>`}
@@ -607,7 +607,7 @@ function renderMe() {
     <div class="hd"><h1>じぶん</h1><button class="icon-btn" data-act="settings" aria-label="設定">${I.gear}</button></div>
     <div class="ph">${ava(p, 92)}<div class="nm">${esc(p.name)}</div>${p.bio ? `<div class="bio">${esc(p.bio)}</div>` : ''}
       <button class="code" data-act="copy-code">${esc(p.code || '------')} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div>
-    <div style="display:flex;gap:8px;padding:0 16px 14px"><button class="btn p" style="flex:1;height:44px;font-size:14px" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g" style="flex:1;height:44px;font-size:14px" data-act="add-friend">コードで追加</button></div>
+    <div style="display:flex;gap:8px;padding:0 16px 14px"><button class="btn p" style="flex:1.4 1 0;min-width:0;height:44px;font-size:14px;padding:0 10px" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g" style="flex:1 1 0;min-width:0;height:44px;font-size:14px;padding:0 10px" data-act="add-friend">コードで追加</button></div>
     ${api.user()?.anonymous && S.mine.length ? `<div class="demo" data-act="settings" style="cursor:pointer">🔐 今は匿名アカウントです。機種変更やブラウザのデータ削除で消えないよう、<b>メールを登録</b>しておこう →</div>` : ''}
     <div class="card stats"><div><b>${S.mine.length}</b><small>シェア</small></div><div><b>${S.friends.length}</b><small>フレンド</small></div><div><b>${streak()}</b><small>連続日数🔥</small></div></div>
     <div class="me-grid">
@@ -904,6 +904,7 @@ const A = {
   'add-friend': () => openAddFriend(),
   'add-code': async () => { const f = await addByCode($('#fc').value); if (f) closeSheet(); },
   'share-invite': () => shareInvite(),
+  'retry-chart': () => { S.loaded.chart = false; renderExplore(); loadChart(); },
   'copy-code': async () => { try { await navigator.clipboard.writeText(S.profile.code); toast('コードをコピーしました'); } catch { toast(S.profile.code); } },
   chat: el => { closeSheet(); openChat(el.dataset.id); },
   'chat-send': () => chatSend(),
