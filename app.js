@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '9.1.0';
+const VERSION = '9.2.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,6 +15,21 @@ const ART_RE = /^https:\/\/is\d+-ssl\.mzstatic\.com\//, PREVIEW_RE = /^https:\/\
 const safeImg = u => (typeof u === 'string' && (ART_RE.test(u) || /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(u))) ? u : null;
 const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+// ═══ 表示サイズ：機種の画面幅に合わせて自動で拡大縮小 ＋ 設定で「小さめ／ふつう／大きめ」 ═══
+const UI_SIZES = { s: 0.9, m: 1, l: 1.12 };
+let ZOOM = 1;
+function uiSize() { try { return localStorage.getItem('hm_ui') || 'm'; } catch { return 'm'; } }
+function applyZoom() {
+  const w = Math.min(screen.width || innerWidth, innerWidth);
+  const auto = w >= 600 ? 1 : Math.max(0.85, Math.min(1.08, w / 390));   // 390px（iPhone 15）を基準
+  const z = Math.round(auto * (UI_SIZES[uiSize()] || 1) * 100) / 100;
+  if (z === ZOOM && document.documentElement.style.zoom) return false;
+  ZOOM = z; document.documentElement.style.zoom = z === 1 ? '' : String(z);
+  document.documentElement.style.setProperty('--zoom', z);
+  return true;
+}
+applyZoom();
+let zoomT; addEventListener('resize', () => { clearTimeout(zoomT); zoomT = setTimeout(() => { if (applyZoom() && typeof render === 'function') render(); }, 200); });
 // 開いた日数（インストール案内を2日目から出すため）
 const launchDays = (() => { let n = 1; try { const t = new Date().toDateString(); const d = JSON.parse(localStorage.getItem('hm_days') || '[]'); if (!d.includes(t)) d.push(t); localStorage.setItem('hm_days', JSON.stringify(d.slice(-3))); n = d.length; } catch { /* */ } return () => n; })();
 
@@ -662,6 +677,8 @@ function openSettings() {
     <div class="set-title">通知</div>
     <div class="set-group">
       <div class="set-row" data-act="toggle-push"><div class="grow">プッシュ通知<small>DM・贈りもの・シンクロ・フレンドの雨の日をお知らせ</small></div><div class="sw ${pushOn ? 'on' : ''}"></div></div>
+      <div class="set-row" style="cursor:default"><div class="grow">表示サイズ<small>機種の画面に合わせて自動で調整。さらに好みで変えられます</small></div></div>
+      <div style="padding:0 16px 12px"><div class="seg">${[['s', '小さめ'], ['m', 'ふつう'], ['l', '大きめ']].map(([k, t]) => `<button class="${uiSize() === k ? 'on' : ''}" data-act="ui-size" data-k="${k}">${t}</button>`).join('')}</div></div>
       <div class="set-row" data-act="share-rain"><div class="grow">雨の日をフレンドに知らせる<small>悲しい・さみしい・モヤモヤの日に「雨みたい」と届きます</small></div><div class="sw ${p?.share_rain !== false ? 'on' : ''}"></div></div>
       ${isIOS && !standalone ? `<div class="set-row"><div class="grow" style="font-size:13px;color:var(--tx2);line-height:1.6">iPhoneで通知を受け取るには、Safariの共有ボタン <b>⬆︎</b> →「<b>ホーム画面に追加</b>」して、ホーム画面のアイコンから開いてください</div></div>` : ''}
     </div>
@@ -1113,7 +1130,7 @@ function rainbowHTML() {
   const moods = RAINBOW_ORDER.map(e => (R.moods || []).find(m => m.e === e)).filter(Boolean);
   const people = Math.max(1, R.total || 1), FULL = 110;
   const TH = Math.min(FULL, 14 + 16 * (people - 1));
-  const W = Math.min(innerWidth, 480) - 40, Rr = Math.round(W / 2), cy = Rr + 4;
+  const W = Math.min(innerWidth / ZOOM, 480) - 40, Rr = Math.round(W / 2), cy = Rr + 4;
   let r = Rr; const bands = [];
   const posted = moods.reduce((a, m) => a + m.n, 0);
   const add = (key, n, c, dashed) => { const t = Math.max(5, Math.round(TH * n / people)); bands.push({ key, r, t, c, dashed }); r -= t; };
@@ -1396,9 +1413,12 @@ function padMood(x, y) {
 function bindPad() {
   const el = $('#mood-pad'); if (!el || el._bound) return; el._bound = true;
   const set = e => {
+    // 表示サイズ（zoom）対策：ブラウザによって座標の単位が違うので、要素の実寸と比べて合わせる
     const r = el.getBoundingClientRect();
-    C.mx = Math.round(Math.max(-100, Math.min(100, ((e.clientX - r.left) / r.width) * 200 - 100)));
-    C.my = Math.round(Math.max(-100, Math.min(100, 100 - ((e.clientY - r.top) / r.height) * 200)));
+    const k = Math.abs(r.width - el.offsetWidth * ZOOM) <= Math.abs(r.width - el.offsetWidth) ? 1 : ZOOM;
+    const fx = (e.clientX / k - r.left) / r.width, fy = (e.clientY / k - r.top) / r.height;
+    C.mx = Math.round(Math.max(-100, Math.min(100, fx * 200 - 100)));
+    C.my = Math.round(Math.max(-100, Math.min(100, 100 - fy * 200)));
     let dot = el.querySelector('.pad-dot'); el.querySelector('.pad-hint')?.remove();
     if (!dot) { dot = document.createElement('i'); dot.className = 'pad-dot'; el.appendChild(dot); }
     dot.style.left = `${(C.mx + 100) / 2}%`; dot.style.top = `${(100 - C.my) / 2}%`;
@@ -1419,6 +1439,10 @@ async function loadV8() { await Promise.all([loadNotifs(), loadRelays()]); if (S
 // ── アクション ──
 Object.assign(A, {
   'rb-pick': el => { S.rbPick = S.rbPick === el.dataset.e ? null : el.dataset.e; buzz(5); renderHome(); },
+  'ui-size': el => {
+    try { localStorage.setItem('hm_ui', el.dataset.k); } catch { /* */ }
+    applyZoom(); $$('[data-act="ui-size"]').forEach(b => b.classList.toggle('on', b === el)); render(); toast('表示サイズを変えました');
+  },
   'share-rain': async el => {
     const sw = el.querySelector('.sw'); const on = !sw.classList.contains('on');
     try { S.profile = await api.updateProfile({ share_rain: on }); sw.classList.toggle('on', on); toast(on ? '雨の日をフレンドに知らせます' : '雨の日は知らせません'); } catch (e) { toast(errText(e)); }

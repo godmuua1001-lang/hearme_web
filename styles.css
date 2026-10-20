@@ -318,7 +318,13 @@ body.chat-open #mini{bottom:calc(var(--sab) + 76px);}
 #moment-ov .t{font-family:var(--disp);font-size:58px;font-weight:800;color:var(--rs);font-variant-numeric:tabular-nums;}
 
 .demo{margin:0 16px 12px;padding:10px 14px;border-radius:14px;background:rgba(255,176,48,.08);border:1px solid rgba(255,176,48,.25);color:var(--am);font-size:12px;line-height:1.6;}
-@media (min-width:600px){ #app,.sheet,.page,.ob{max-width:480px;margin:0 auto;} .sheet{left:50%;transform:translate(-50%,105%);width:100%;} .sheet.on{transform:translate(-50%,0);} }
+@media (min-width:600px){ #app,.sheet,.page,.ob{max-width:480px;margin:0 auto;} .sheet{left:0;right:0;width:100%;}
+  #app{border-left:1px solid var(--ln);border-right:1px solid var(--ln);} }
+/* 小さい画面（Galaxy Z Fold の外画面など） */
+@media (max-width:330px){ .hd{padding-left:14px;padding-right:14px;} .rb-head{font-size:19px;} .rx span{display:none;} .rx{padding:0 10px;} }
+/* 背の低い画面（iPhone SE など）：虹の上の余白を詰める */
+@media (max-height:700px){ .rb-wrap{padding-top:2px;} .rb-head{margin-bottom:8px;} }
+#mood-pad *{pointer-events:none;}
 
 /* AI選曲 */
 .ai-box{margin:0 18px 4px;padding:14px;border-radius:20px;background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(107,149,255,.06));border:1px solid rgba(167,139,250,.28);}
