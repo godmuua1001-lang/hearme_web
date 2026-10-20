@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '8.0.0';
+const VERSION = '9.0.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -21,7 +21,18 @@ const MOODS = [
   ['😢', '悲しい'], ['🥺', '寂しい'], ['😤', 'モヤモヤ'], ['😴', '眠い'], ['💭', '考え中'],
 ];
 const REACTS = ['❤️', '😢', '👏', '✨', '🫂', '🔥'];
-const MOOD_COLOR = { '😊': '#ffb030', '😌': '#3ecfc5', '🤩': '#ffb030', '🔥': '#ff5f7e', '🥰': '#ff8fab', '😢': '#6b95ff', '🥺': '#a78bfa', '😤': '#ff5f7e', '😴': '#8a8d95', '💭': '#3ecfc5' };
+// きもちの色：明るさをそろえ、虹の順（赤→橙→黄→緑→青→紫）に並べる
+const MOOD_META = {
+  '🔥': { label: '熱い', name: 'ほのお', c: '#F07A7A' }, '🤩': { label: 'アガる', name: 'ゆうやけ', c: '#F59E6B' },
+  '😊': { label: '嬉しい', name: 'ひだまり', c: '#F5C76B' }, '😌': { label: '穏やか', name: 'わかば', c: '#8FD1B5' },
+  '💭': { label: '考え中', name: 'きり', c: '#B8C4D6' }, '😢': { label: '悲しい', name: 'あおぞら', c: '#6FA0E6' },
+  '😴': { label: '眠い', name: 'よぞら', c: '#7F8CC7' }, '🥺': { label: 'さみしい', name: 'すみれ', c: '#A08BE8' },
+  '😤': { label: 'モヤモヤ', name: 'かすみ', c: '#B5A8C9' }, '🥰': { label: 'すき', name: 'さくら', c: '#F29BB8' },
+};
+const RAINBOW_ORDER = ['🔥', '🤩', '😊', '😌', '💭', '😢', '😴', '🥺', '😤', '🥰'];
+const MOOD_COLOR = Object.fromEntries(Object.entries(MOOD_META).map(([e, m]) => [e, m.c]));
+const moodOf = m => { const e = String(m || '').split(' ')[0]; const meta = MOOD_META[e]; return meta ? { e, ...meta } : { e, label: String(m || '').split(' ').slice(1).join(' ') || '—', c: '#C9C5BB', name: '' }; };
+const moodChip = m => { const o = moodOf(m); return `<span class="mchip" style="--mc:${o.c}"><i></i>${esc(o.label)}</span>`; };
 
 // ───────── icons ─────────
 const I = {
@@ -42,6 +53,9 @@ const I = {
   spotify: '<svg width="14" height="14" viewBox="0 0 24 24" fill="#1ed760"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.9.2c-2.4-1.5-5.4-1.8-9-1a.6.6 0 1 1-.3-1.2c3.9-.9 7.2-.5 9.9 1.1.3.2.4.6.3.9zm1.2-2.7a.8.8 0 0 1-1.1.3c-2.7-1.7-6.9-2.2-10.2-1.2a.8.8 0 1 1-.5-1.5c3.7-1.1 8.3-.6 11.4 1.3.4.3.5.8.4 1.1zm.1-2.8C14.7 9 9.4 8.8 6.3 9.7a1 1 0 1 1-.6-1.8c3.5-1.1 9.3-.9 13 1.3a1 1 0 0 1-1 1.7z"/></svg>',
   yt: '<svg width="14" height="14" viewBox="0 0 24 24" fill="#ff3d3d"><path d="M23 7.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.3-1C16.6 3.6 12 3.6 12 3.6s-4.6 0-7.8.3c-.4.1-1.4.1-2.3 1C1.2 5.6 1 7.2 1 7.2S.8 9 .8 10.9v1.8c0 1.8.2 3.7.2 3.7s.2 1.6.9 2.3c.9.9 2 .9 2.6 1 1.8.2 7.5.3 7.5.3s4.6 0 7.8-.3c.4-.1 1.4-.1 2.3-1 .7-.7.9-2.3.9-2.3s.2-1.8.2-3.7v-1.8C23.2 9 23 7.2 23 7.2zM9.7 14.6V8.3l6 3.2-6 3.1z"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>',
+  headphones: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="2.5" y="13" width="4" height="7" rx="1.5"/><rect x="17.5" y="13" width="4" height="7" rx="1.5"/></svg>',
+  gift: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M12 9v11M3.5 13h17M12 9c-2-4-6-4-6-1.5S9.5 9 12 9zm0 0c2-4 6-4 6-1.5S14.5 9 12 9z"/></svg>',
+  spark: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>',
   camera: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
 };
 
@@ -215,8 +229,10 @@ function momentActive() {
 const fmtLeft = ms => `${pad(Math.floor(ms / 60000))}:${pad(Math.floor(ms / 1000) % 60)}`;
 
 function postCard(p) {
-  const locked = !p.mine && !postedToday().length;
+  const locked = false;   // v9：見るための投稿義務はなし（代わりに「聴くと開く」）
   const a = p.author || {};
+  const mo = moodOf(p.mood);
+  const needListen = !p.mine && p.has_comment && p.comment == null;
   const rx = REACTS.map(e => {
     const n = p.mine ? (p.reactions?.[e] || 0) : 0; const on = p.my_reaction === e;   // ⑤ 数字は本人にだけ
     return `<button class="rx ${on ? 'on' : ''}" data-act="react" data-id="${p.id}" data-e="${e}">${e}${n ? `<b>${n}</b>` : ''}</button>`;
@@ -224,14 +240,14 @@ function postCard(p) {
   const [me, ml] = splitMood(p.mood);
   return `<article class="post ${locked ? 'locked' : ''}" data-post="${p.id}">
     <div class="post-hd">${ava(a, 38)}<div class="who"><div class="nm ellip">${esc(p.mine ? 'あなた' : a.name)}</div>
-      <div class="tm">${rel(p.created_at)}${p.on_time ? '<span class="ontime">⚡ オンタイム</span>' : ''}${p.is_public && p.mine ? '<span>· 🌍 みんなにも</span>' : ''}</div></div>
+      <div class="tm">${rel(p.created_at)}${p.is_public && p.mine ? '<span>· 🌍 みんなにも</span>' : ''}</div></div>
       <button class="icon-btn" style="width:32px;height:32px;background:none;border:none" data-act="post-menu" data-id="${p.id}" aria-label="メニュー">${I.more}</button></div>
-    <div class="song tap" data-act="open-post" data-id="${p.id}">${art(p)}<div class="meta"><div class="ti ellip">${esc(p.title)}</div><div class="ar ellip">${esc(p.artist)}</div></div>${playBtn(p)}</div>
-    ${p.comment ? `<div class="cm">${esc(p.comment)}</div>` : ''}
-    <div class="mood"><span class="chip">${esc(me)} ${esc(ml)}</span></div>
+    <div class="song tap" data-act="open-post" data-id="${p.id}">${art(p)}<div class="meta"><div class="ti ellip">${esc(p.title)}</div><div class="ar ellip">${esc(p.artist)}</div></div>${needListen ? `<span class="listen-ring" data-ring="${p.id}" style="--mc:${mo.c}">${playBtn(p)}</span>` : playBtn(p)}</div>
+    ${p.comment ? `<div class="cm">${esc(p.comment)}</div>` : needListen ? `<div class="cm-lock" data-lock="${p.id}">${I.headphones}<span>15秒聴くと、ひとことが開きます</span></div>` : ''}
+    <div class="mood">${moodChip(p.mood)}</div>
     ${locked ? '' : `<div class="reacts">${rx}</div>`}
-    ${locked ? '' : p.mine ? `<div class="post-foot">${p.listened ? `<span>🎧 ${p.listened}人が聴いてくれた</span>` : '<span class="faint">まだ誰も聴いていません</span>'}<button data-act="same-mood" data-m="${esc(p.mood)}">${esc(me)} 同じ気持ちの人</button></div>`
-      : (p.author?.id && S.friends.some(f => f.id === p.author.id)) ? `<div class="post-foot"><span class="faint">${p.i_listened ? '🎧 聴いた' : ''}</span><button data-act="gift" data-id="${esc(p.author.id)}" data-post="${p.id}">🎁 曲を贈る</button></div>` : ''}
+    ${locked ? '' : p.mine ? `<div class="post-foot">${p.listened ? `<span>${p.listened}人が聴いてくれた</span>` : '<span class="faint">まだ誰も聴いていません</span>'}<button data-act="same-mood" data-m="${esc(p.mood)}">同じ色の人</button></div>`
+      : (p.author?.id && S.friends.some(f => f.id === p.author.id)) ? `<div class="post-foot"><span class="faint">${p.i_listened ? '聴いた' : ''}</span><button class="gift-btn" style="--mc:${mo.c}" data-act="gift" data-id="${esc(p.author.id)}" data-post="${p.id}">${I.gift} 曲を贈る</button></div>` : ''}
     ${locked ? `<div class="lockmsg"><div style="font-size:26px">🔒</div><b>今日の1曲をシェアすると見られます</b><button class="btn p sm" data-act="compose">シェアする</button></div>` : ''}
   </article>`;
 }
@@ -243,11 +259,8 @@ function skeletonPosts(n = 2) {
 
 function renderHome() {
   const el = $('#t-home');
-  const ml = momentActive();
-  const posted = postedToday().length;
   const list = S.mode === 'friends' ? S.feed : S.pub;
   const loaded = S.mode === 'friends' ? S.loaded.feed : S.loaded.pub;
-  const todayFriends = new Set(S.feed.filter(p => !p.mine && isToday(p.created_at)).map(p => p.author?.id));
   let feedHTML;
   if (!loaded) feedHTML = skeletonPosts(3);
   else if (S.mode === 'friends' && !S.friends.length) feedHTML = `<div class="card" style="margin:6px 16px 14px;"><div class="empty"><span class="e-ic">🎧</span><b>フレンドを招待しよう</b>招待リンクを送ると、お互いの「今日の1曲」が届くようになります<div style="display:flex;gap:8px;justify-content:center;margin-top:16px"><button class="btn p sm" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g sm" data-act="add-friend">コードで追加</button></div></div></div>` + list.filter(p => p.mine).map(postCard).join('');
@@ -263,16 +276,10 @@ function renderHome() {
     <div class="ptr" id="ptr">↓ 引っ張って更新</div>
     ${showInstallCard() ? `<div class="cta" style="background:rgba(233,228,216,.05);border-color:var(--ln2)"><div class="ic" style="background:var(--s3)"><img src="/icon-192.png" alt="" style="width:30px;border-radius:8px"></div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">アプリとして使う</div><div class="muted" style="font-size:11.5px;margin-top:2px">ホーム画面に追加すると通知も届きます</div></div><button class="btn p sm" data-act="install-app">追加</button><button class="faint" style="padding:6px" data-act="install-dismiss" aria-label="閉じる">✕</button></div>` : ''}
     ${LIVE ? '' : `<div class="demo">🧪 デモモード：データはこの端末だけに保存されます。フレンド（ゆーき・みお）はお試し用です</div>`}
-    ${ml ? `<div class="moment tap" data-act="compose"><div style="flex:1"><div style="font-weight:700;font-size:15px">⚡ hearmeの時間！</div><div class="muted" style="font-size:12px;margin-top:2px">みんな今、曲を選んでいます</div></div><div class="t" data-countdown>${fmtLeft(ml)}</div></div>` : ''}
-    <div class="stories">
-      <div class="story" data-act="${posted ? 'my-latest' : 'compose'}"><div class="ring ${posted ? 'new' : ''}">${ava(S.profile, 54)}</div><small class="ellip">${posted ? 'あなた' : '＋ シェア'}</small></div>
-      ${S.friends.map(f => `<div class="story" data-act="friend-latest" data-id="${f.id}"><div class="ring ${todayFriends.has(f.id) ? 'new' : ''}">${ava(f, 54)}</div><small class="ellip">${esc(f.name)}</small></div>`).join('')}
-      <div class="story add" data-act="add-friend"><div class="ring">${`<div class="ava" style="width:54px;height:54px">${I.plus.replace('<svg', '<svg width="20" height="20"')}</div>`}</div><small>招待</small></div>
-    </div>
-    ${posted ? '' : `<div class="cta tap" data-act="compose"><div class="ic">${I.note}</div><div style="flex:1"><div style="font-weight:600;font-size:15px">今日の1曲をシェア</div><div class="muted" style="font-size:12px;margin-top:2px">シェアするとフレンドの曲が見られます</div></div><div class="faint">›</div></div>`}
+    ${rainbowHTML()}
+    ${bannersHTML()}
     ${nightCardHTML()}
     ${recoveryHTML()}
-    ${S.mode === 'friends' ? weatherHTML() : ''}
     ${S.mode === 'friends' ? relayCardsHTML() : ''}
     <div style="padding:0 16px 12px"><div class="seg"><button class="${S.mode === 'friends' ? 'on' : ''}" data-act="mode" data-m="friends">フレンド</button><button class="${S.mode === 'public' ? 'on' : ''}" data-act="mode" data-m="public">みんな</button></div></div>
     ${feedHTML}
@@ -306,11 +313,16 @@ function openComposer(prefill) {
   renderComposer();
   if (!prefill) setTimeout(() => $('#cmp-q')?.focus(), 400);
 }
+function tintComposer() {
+  const g = $('#cmp-glow'); if (g) g.style.backgroundColor = C.mood ? moodOf(C.mood).c : 'transparent';
+  const b = $('#cmp-go'); if (b) b.style.background = C.mood ? moodOf(C.mood).c : '';
+}
 function renderComposer() {
-  const ml = momentActive();
+  const ml = 0;
   const ok = C.song && C.mood;
   $('#cmp').innerHTML = `
-    <div class="row" style="padding:0 18px 10px"><button class="faint" style="font-size:14px" data-act="close-sheet">キャンセル</button>
+    <div id="cmp-glow" class="glow-top"></div>
+    <div class="row" style="padding:0 18px 10px;position:relative"><button class="faint" style="font-size:14px" data-act="close-sheet">キャンセル</button>
       <div class="disp" style="flex:1;text-align:center;font-size:17px">今日の1曲</div>
       <button class="btn p sm" id="cmp-go" ${ok ? '' : 'disabled'} data-act="post">シェア</button></div>
     ${ml ? `<div class="moment" style="margin:0 18px 12px;padding:10px 14px"><div style="flex:1;font-size:13px;font-weight:700">⚡ hearmeの時間！ 今シェアすると「オンタイム」</div><div class="t" style="font-size:18px" data-countdown>${fmtLeft(ml)}</div></div>` : ''}
@@ -326,14 +338,14 @@ function renderComposer() {
     ${C.song ? `
     <div class="sec" style="padding-top:20px"><span class="lbl">今の気分</span><span class="faint" style="font-size:11px">なぞる or えらぶ</span></div>
     <div style="padding:0 18px 10px">${padHTML()}</div>
-    <div class="moods">${MOODS.map(([e, l]) => `<button class="md ${C.mood === e + ' ' + l ? 'on' : ''}" data-act="mood" data-m="${e} ${l}"><span>${e}</span><small>${l}</small></button>`).join('')}</div>
+    <div class="moods2">${RAINBOW_ORDER.map(e => { const l = MOODS.find(([x]) => x === e)[1]; const o = MOOD_META[e]; return `<button class="md2 ${C.mood === e + ' ' + l ? 'on' : ''}" style="--mc:${o.c}" data-act="mood" data-m="${e} ${l}"><i></i>${o.label}</button>`; }).join('')}</div>
     <div class="sec" style="padding-top:20px"><span class="lbl">ひとこと（なくてもOK）</span><span class="faint" style="font-size:11px" id="cmp-n">${C.comment.length}/60</span></div>
     <div style="padding:0 18px"><textarea class="inp" id="cmp-c" rows="2" maxlength="60" placeholder="この曲を選んだ理由とか">${esc(C.comment)}</textarea></div>
     <div class="toggle" data-act="pubtoggle"><div style="flex:1"><div style="font-size:14px;font-weight:600">🌍 みんなにも匿名で届ける</div><div class="faint" style="font-size:12px;margin-top:2px">名前は出ません。知らない誰かが絵文字で反応してくれるかも</div></div><div class="sw ${C.pub ? 'on' : ''}"></div></div>
     <div class="faint" style="text-align:center;font-size:12px;padding:6px 0 30px">今日はあと${leftToday()}回シェアできます</div>` : ''}`;
   const q = $('#cmp-q');
   if (q) q.oninput = () => { C.q = q.value; searchDebounced(); };
-  bindPad();
+  bindPad(); tintComposer();
   const aq = $('#ai-q');
   if (aq) { aq.oninput = () => { C.ai.q = aq.value; }; aq.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); askAI(); } }; }
   const c = $('#cmp-c');
@@ -591,6 +603,7 @@ function renderMe() {
     cal.push(`<div class="${i === 0 ? 'today' : ''}" style="${e ? `background:${MOOD_COLOR[e] || '#e9e4d8'}22` : ''}">${esc(e)}<small>${d.getDate()}</small></div>`);
   }
   el.innerHTML = `
+    <div class="glow-top me-glow"></div>
     <div class="hd"><h1>じぶん</h1><button class="icon-btn" data-act="settings" aria-label="設定">${I.gear}</button></div>
     <div class="ph">${ava(p, 92)}<div class="nm">${esc(p.name)}</div>${p.bio ? `<div class="bio">${esc(p.bio)}</div>` : ''}
       <button class="code" data-act="copy-code">${esc(p.code || '------')} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div>
@@ -634,7 +647,8 @@ function openSettings() {
     </div>
     <div class="set-title">通知</div>
     <div class="set-group">
-      <div class="set-row" data-act="toggle-push"><div class="grow">プッシュ通知<small>DMと、毎日の「hearmeの時間」をお知らせ</small></div><div class="sw ${pushOn ? 'on' : ''}"></div></div>
+      <div class="set-row" data-act="toggle-push"><div class="grow">プッシュ通知<small>DM・贈りもの・シンクロ・フレンドの雨の日をお知らせ</small></div><div class="sw ${pushOn ? 'on' : ''}"></div></div>
+      <div class="set-row" data-act="share-rain"><div class="grow">雨の日をフレンドに知らせる<small>悲しい・さみしい・モヤモヤの日に「雨みたい」と届きます</small></div><div class="sw ${p?.share_rain !== false ? 'on' : ''}"></div></div>
       ${isIOS && !standalone ? `<div class="set-row"><div class="grow" style="font-size:13px;color:var(--tx2);line-height:1.6">iPhoneで通知を受け取るには、Safariの共有ボタン <b>⬆︎</b> →「<b>ホーム画面に追加</b>」して、ホーム画面のアイコンから開いてください</div></div>` : ''}
     </div>
     <div class="set-title">安全</div>
@@ -843,7 +857,7 @@ const A = {
   'ai-go': () => askAI(),
   'ai-pick': el => { C.song = C.ai.songs[+el.dataset.i]; buzz(6); renderComposer(); },
   unpick: () => { C.song = null; renderComposer(); setTimeout(() => $('#cmp-q')?.focus(), 50); },
-  mood: el => { C.mood = el.dataset.m; buzz(5); $$('.md').forEach(b => b.classList.toggle('on', b === el)); $('#cmp-go').disabled = !(C.song && C.mood); },
+  mood: el => { C.mood = el.dataset.m; buzz(5); $$('.md2').forEach(b => b.classList.toggle('on', b === el)); $('#cmp-go').disabled = !(C.song && C.mood); tintComposer(); },
   pubtoggle: el => { C.pub = !C.pub; el.querySelector('.sw').classList.toggle('on', C.pub); buzz(5); },
   post: () => submitPost(),
   'open-post': el => openPost(el.dataset.id),
@@ -985,7 +999,7 @@ function openSub(html, onMount) {
 const subHead = (title, right = '') => `<div class="page-hd"><button class="back" data-act="close-page">${I.back}</button><div class="ttl disp ellip" style="font-size:18px">${title}</div>${right}</div>`;
 
 // ── 通知（受信箱） ──
-async function loadNotifs() { try { V8.notifs = await api.notifications(); } catch { /* v8.sql 未適用など */ } bell(); checkCare(); }
+async function loadNotifs() { try { V8.notifs = await api.notifications(); } catch { /* v8.sql 未適用など */ } bell(); checkCare(); if (S.tab === 'home' && started) renderHome(); }
 function bell() { const n = V8.notifs.filter(x => !x.read_at && x.kind !== 'care').length; $$('.bell-badge').forEach(b => { b.textContent = n > 9 ? '9+' : n; b.classList.toggle('hide', !n); }); }
 function openInbox() {
   const list = V8.notifs.filter(n => n.kind !== 'care');
@@ -1028,15 +1042,17 @@ function giftSheet(friendId, postId) {
   const p = postId ? S.posts.get(postId) : null;
   V8.G = V8.G?.to === friendId ? V8.G : { to: friendId, post: postId || null, song: null, message: '', anon: false, ai: [], aiLoading: false };
   const G = V8.G;
-  openSheet(`<div style="padding:4px 20px 24px">
+  const fp = p || S.feed.find(x => x.author?.id === friendId && isToday(x.created_at));
+  const gc = fp ? moodOf(fp.mood).c : '#ecebe7';
+  openSheet(`<div id="gift-glow" class="glow-top" style="background-color:${gc}"></div><div style="padding:4px 20px 24px;position:relative;--mc:${gc}">
     <div class="row" style="justify-content:center;gap:10px;margin-bottom:6px">${ava(f, 40)}<div class="disp" style="font-size:20px">${esc(f.name)}に曲を贈る</div></div>
     ${p ? `<div class="faint" style="text-align:center;font-size:12.5px;margin-bottom:12px">今日の気分：${esc(p.mood)}${p.comment ? `「${esc(p.comment)}」` : ''}</div>` : '<div style="height:10px"></div>'}
     ${G.song ? songMini(G.song, `<button class="icon-btn" style="width:30px;height:30px" data-act="gift-unpick">${I.x.replace('<svg', '<svg width="12" height="12"')}</button>`)
-      : `<div class="row" style="gap:8px"><button class="btn p" style="flex:1" data-act="gift-pick">🔎 曲を選ぶ</button><button class="btn g" style="flex:1" data-act="gift-ai" ${G.aiLoading ? 'disabled' : ''}>${G.aiLoading ? '<span class="spin"></span>' : '✨ AIに選んでもらう'}</button></div>
+      : `<div class="row" style="gap:8px"><button class="btn g" style="flex:1" data-act="gift-pick">${I.search} 曲をさがす</button><button class="btn g" style="flex:1;border-color:var(--mc)" data-act="gift-ai" ${G.aiLoading ? 'disabled' : ''}>${G.aiLoading ? '<span class="spin"></span>' : `${I.spark} AIにえらんでもらう`}</button></div>
          ${G.ai.length ? `<div style="margin-top:10px">${G.ai.map((s, i) => `<div class="ai-song tap" data-act="gift-ai-pick" data-i="${i}">${art(s, 46)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600;font-size:14px">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px">${esc(s.artist)}</div>${s.reason ? `<div style="font-size:12px;color:var(--cr2)">💬 ${esc(s.reason)}</div>` : ''}</div>${playBtn(s, 'dim')}</div>`).join('')}</div>` : ''}`}
     <textarea class="inp" id="g-msg" rows="2" maxlength="60" placeholder="ひとこと添える（なくてもOK）" style="margin-top:12px">${esc(G.message)}</textarea>
-    <div class="toggle" data-act="gift-anon" style="padding:12px 2px"><div style="flex:1"><div style="font-size:14px;font-weight:600">🤫 名前を伏せて贈る</div><div class="faint" style="font-size:12px">「誰かが曲を贈ってくれた」とだけ届きます</div></div><div class="sw ${G.anon ? 'on' : ''}"></div></div>
-    <button class="btn p w" data-act="gift-send" ${G.song ? '' : 'disabled'}>🎁 贈る</button></div>`, { full: G.ai.length > 0 });
+    <div class="toggle" data-act="gift-anon" style="padding:12px 2px"><div style="flex:1"><div style="font-size:14px;font-weight:600">名前を伏せて贈る</div><div class="faint" style="font-size:12px">「誰かが曲を贈ってくれた」とだけ届きます</div></div><div class="sw ${G.anon ? 'on' : ''}"></div></div>
+    <button class="btn p w" style="background:${gc}" data-act="gift-send" ${G.song ? '' : 'disabled'}>${I.gift} 贈る</button></div>`, { full: G.ai.length > 0 });
   const m = $('#g-msg'); if (m) m.oninput = () => { G.message = m.value; };
 }
 async function giftsPage() {
@@ -1055,11 +1071,76 @@ async function giftsPage() {
 }
 
 // ── ② 聴いてくれたよ（5秒以上再生したら） ──
+// ① 聴かないと読めない：15秒聴いたら、ひとことが開く
+const LISTEN_SEC = 15;
 music.player.subscribe(st => {
-  const s = st.song; if (!st.playing || !s?.id || st.t < 5 || V8.listened.has(s.id)) return;
-  const p = S.posts.get(s.id); if (!p || p.mine) return;
-  V8.listened.add(s.id); api.markListened(s.id).catch(() => {});
+  const s = st.song; const p = s?.id && S.posts.get(s.id);
+  if (p && !p.mine) {
+    const ring = $(`[data-ring="${p.id}"]`); if (ring) ring.style.setProperty('--pct', `${Math.min(100, (st.t / LISTEN_SEC) * 100)}%`);
+    const lock = $(`[data-lock="${p.id}"] span`); if (lock && st.playing && st.t < LISTEN_SEC) lock.textContent = `あと${Math.ceil(LISTEN_SEC - st.t)}秒で、ひとことが開きます`;
+  }
+  if (!st.playing || !p || p.mine || st.t < LISTEN_SEC || V8.listened.has(p.id)) return;
+  V8.listened.add(p.id);
+  api.markListened(p.id).then(r => {
+    p.i_listened = true;
+    if (r?.comment != null) p.comment = r.comment;
+    const card = $(`[data-post="${p.id}"]`);
+    if (card) { const tmp = document.createElement('div'); tmp.innerHTML = postCard(p); const n = tmp.firstElementChild; n.classList.add('unlocked'); card.replaceWith(n); }
+    if (p.comment) buzz([8, 30, 8]);
+  }).catch(() => { V8.listened.delete(p.id); });
 });
+
+// ④ 今日の虹
+function rainbowHTML() {
+  const R = S.rainbow;
+  if (!R) return `<div class="rb-wrap"><div class="sk" style="height:200px;border-radius:200px 200px 0 0;margin:0 6px"></div></div>`;
+  const moods = RAINBOW_ORDER.map(e => (R.moods || []).find(m => m.e === e)).filter(Boolean);
+  const people = Math.max(1, R.total || 1), FULL = 110;
+  const TH = Math.min(FULL, 14 + 16 * (people - 1));
+  const W = Math.min(innerWidth, 480) - 40, Rr = Math.round(W / 2), cy = Rr + 4;
+  let r = Rr; const bands = [];
+  const posted = moods.reduce((a, m) => a + m.n, 0);
+  const add = (key, n, c, dashed) => { const t = Math.max(5, Math.round(TH * n / people)); bands.push({ key, r, t, c, dashed }); r -= t; };
+  moods.forEach(m => add(m.e, m.n, MOOD_META[m.e]?.c || '#ccc', false));
+  if (R.waiting) add('wait', R.waiting, 'rgba(236,235,231,.07)', true);
+  const pick = S.rbPick;
+  const band = b => `<button class="rb-band ${b.dashed ? 'dash' : ''}" ${b.dashed ? 'tabindex="-1"' : `data-act="rb-pick" data-e="${b.key}"`} aria-label="${b.dashed ? 'まだの人' : esc(MOOD_META[b.key]?.label || '')}"
+      style="left:${Rr - b.r}px;top:${cy - b.r}px;width:${b.r * 2}px;height:${b.r}px;border-width:${b.t}px ${b.t}px 0 ${b.t}px;border-color:${b.c};border-radius:${b.r}px ${b.r}px 0 0;opacity:${pick && pick !== b.key ? .3 : 1}"></button>`;
+  const meE = R.me; const meC = meE ? MOOD_META[meE]?.c : null;
+  const headline = people <= 1 ? 'まだ細い、あなたの虹' : people === 2 ? 'ふたりの虹' : `${people}人でつくる虹`;
+  const sub = people <= 1 ? 'フレンドの色が重なるほど、虹は太くなる' : R.waiting ? `あと${R.waiting}人がまだ空のまま` : 'みんなの色がそろいました';
+  const pm = pick && moods.find(m => m.e === pick);
+  return `<div class="rb-wrap">
+    <div class="lbl" style="letter-spacing:.12em">今日の虹</div>
+    <div class="rb-head">${headline}</div>
+    <div class="rb" style="width:${W}px;height:${cy + 2}px">
+      ${TH < FULL ? `<div class="rb-ghost" style="left:0;top:4px;width:${W}px;height:${Rr}px;border-radius:${Rr}px ${Rr}px 0 0"></div><div class="rb-ghost" style="left:${FULL}px;top:${4 + FULL}px;width:${W - FULL * 2}px;height:${Rr - FULL}px;border-radius:${Rr - FULL}px ${Rr - FULL}px 0 0"></div>` : ''}
+      <div class="rb-glow">${bands.filter(b => !b.dashed).map(band).join('')}</div>
+      ${bands.map(band).join('')}
+      <div class="rb-sub">${sub}</div>
+    </div>
+    <div class="rb-legend">${moods.map(m => `<button class="mchip ${pick === m.e ? 'on' : ''}" style="--mc:${MOOD_META[m.e].c}" data-act="rb-pick" data-e="${m.e}"><i></i>${MOOD_META[m.e].label} ${m.n}${m.n > 1 || people > 1 ? '人' : ''}</button>`).join('')}
+      ${!meE ? `<button class="mchip add" data-act="compose">${I.plus.replace('<svg', '<svg width="12" height="12"')} あなたの色をたす</button>` : ''}</div>
+    ${pm ? `<div class="rb-pick" style="--mc:${MOOD_META[pm.e].c}"><b>${MOOD_META[pm.e].label}</b>　${pm.names.map(esc).join('・')}
+      ${moodOf(pm.e + ' x').label && ['😢', '🥺', '😤'].includes(pm.e) ? `<div class="rb-gifts">${pm.ids.filter(id => S.friends.some(f => f.id === id)).map(id => { const f = S.friends.find(x => x.id === id); return `<button class="gift-btn" style="--mc:${MOOD_META[pm.e].c}" data-act="gift" data-id="${esc(id)}">${I.gift} ${esc(f.name)}に贈る</button>`; }).join('')}</div>` : ''}</div>` : ''}
+    ${meC ? '' : ''}
+  </div>`;
+}
+// ②③ 今日の寄り添い・シンクロ
+function bannersHTML() {
+  const today = V8.notifs.filter(n => isToday(n.created_at));
+  const out = [];
+  const sync = today.find(n => n.kind === 'sync');
+  if (sync) out.push(`<button class="banner" style="--mc:#F5C76B" data-act="notif-go" data-url="${esc(sync.url)}"><span class="b-ic">${I.spark}</span><span class="b-tx"><b>${esc(sync.title.replace(/^✨\s*/, ''))}</b><small>${esc(sync.body)}</small></span></button>`);
+  today.filter(n => n.kind === 'rain').slice(0, 2).forEach(n => {
+    const fid = n.data?.friend; const f = S.friends.find(x => x.id === fid); if (!f) return;
+    out.push(`<div class="banner" style="--mc:#6FA0E6">${ava(f, 34)}<span class="b-tx"><b>${esc(n.title.replace(/^🌧\s*/, ''))}</b><small>寄り添う1曲を贈る？</small></span><button class="btn sm gift-btn" style="--mc:#6FA0E6" data-act="gift" data-id="${esc(fid)}" data-post="${esc(n.data?.post || '')}">贈る</button></div>`);
+  });
+  return out.join('');
+}
+// 自分の今日の色（FAB・じぶん画面）
+function myColor() { const p = postedToday()[0]; return p ? moodOf(p.mood).c : null; }
+function applyMyColor() { const c = myColor(); document.documentElement.style.setProperty('--me', c || '#ecebe7'); document.documentElement.style.setProperty('--me-glow', c ? c + '55' : 'rgba(236,235,231,.15)'); }
 
 // ── ③ 同じ気持ちの人 ──
 async function sameMoodSheet(mood) {
@@ -1306,7 +1387,7 @@ function bindPad() {
     if (!dot) { dot = document.createElement('i'); dot.className = 'pad-dot'; el.appendChild(dot); }
     dot.style.left = `${(C.mx + 100) / 2}%`; dot.style.top = `${(100 - C.my) / 2}%`;
     const m = padMood(C.mx, C.my);
-    if (m !== C.mood) { C.mood = m; buzz(4); $$('.md').forEach(b => b.classList.toggle('on', b.dataset.m === C.mood)); }
+    if (m !== C.mood) { C.mood = m; buzz(4); $$('.md2').forEach(b => b.classList.toggle('on', b.dataset.m === C.mood)); tintComposer(); }
     const go = $('#cmp-go'); if (go) go.disabled = !(C.song && C.mood);
   };
   let down = false;
@@ -1321,6 +1402,11 @@ async function loadV8() { await Promise.all([loadNotifs(), loadRelays()]); if (S
 
 // ── アクション ──
 Object.assign(A, {
+  'rb-pick': el => { S.rbPick = S.rbPick === el.dataset.e ? null : el.dataset.e; buzz(5); renderHome(); },
+  'share-rain': async el => {
+    const sw = el.querySelector('.sw'); const on = !sw.classList.contains('on');
+    try { S.profile = await api.updateProfile({ share_rain: on }); sw.classList.toggle('on', on); toast(on ? '雨の日をフレンドに知らせます' : '雨の日は知らせません'); } catch (e) { toast(errText(e)); }
+  },
   inbox: () => openInbox(),
   'notif-go': el => routeURL(el.dataset.url),
   'care-ok': () => closeSheet(),
@@ -1418,6 +1504,8 @@ async function loadFeeds() {
   try {
     const [feed, mine] = await Promise.all([api.friendFeed(), api.myPosts()]);
     S.feed = remember(feed); S.mine = remember(mine); S.loaded.feed = S.loaded.mine = true;
+    try { S.rainbow = await api.todayRainbow(); } catch { S.rainbow = { total: 1, waiting: postedToday().length ? 0 : 1, me: postedToday()[0] ? moodOf(postedToday()[0].mood).e : null, moods: postedToday()[0] ? [{ e: moodOf(postedToday()[0].mood).e, n: 1, names: ['あなた'], ids: [] }] : [] }; }
+    applyMyColor();
     // 相手から追加されたフレンドを取りこぼさない
     if (feed.some(p => !p.mine && p.author?.id && !S.friends.some(f => f.id === p.author.id))) await loadFriends();
   } catch (e) { toast(errText(e)); }
@@ -1436,7 +1524,9 @@ async function refreshMe() {
   try { S.activity = await api.activity(); } catch { /* */ }
   badges(); if (S.tab === 'me') renderMe();
 }
-async function loadMoment() {
+async function loadMoment() { return;   // v9：時間システムは廃止
+}
+async function loadMomentOld() {
   try { S.moment = await api.todayMoment(); } catch { S.moment = null; }
   if (momentActive()) { showMoment(); if (S.tab === 'home') renderHome(); }
 }
@@ -1484,6 +1574,7 @@ function wireRealtime() {
     if (n.kind === 'care') { V8.careShown = false; checkCare(); return; }
     if (document.visibilityState === 'visible') toast(n.title); buzz(8);
     if (n.kind === 'relay') loadRelays().then(() => S.tab === 'home' && renderHome());
+    if (['sync', 'rain', 'sync_mood'].includes(n.kind) && S.tab === 'home') renderHome();
   });
 }
 
@@ -1523,8 +1614,8 @@ function renderOB() {
       <div style="flex:1;min-height:24px"></div><button class="btn p w" style="height:54px" data-ob="to-notify">次へ</button></div>`;
   } else if (st === 'notify') {
     const canPush = 'PushManager' in window && 'serviceWorker' in navigator;
-    ob.innerHTML = `<div class="ob-inner">${dots(3)}<h2>毎日1回の<br>「hearmeの時間」⚡</h2><p class="sub">1日1回、ランダムな時間にみんなへ一斉に通知が届きます。10分以内にシェアすると「オンタイム」。DMが届いたときもお知らせします</p>
-      <div class="card" style="padding:20px;text-align:center;margin-bottom:12px"><div style="font-size:44px;margin-bottom:6px">🔔</div><div class="muted" style="font-size:13px;line-height:1.7">${canPush ? '通知をオンにして、大事な瞬間を逃さないで' : isIOS ? 'iPhoneでは、Safariの共有ボタン ⬆︎ →「<b>ホーム画面に追加</b>」してから開くと通知を受け取れます' : 'このブラウザでは通知が使えません'}</div></div>
+    ob.innerHTML = `<div class="ob-inner">${dots(3)}<h2>大事なときだけ<br>そっと知らせます</h2><p class="sub">フレンドの空が雨のとき、曲が贈られたとき、シンクロしたとき、DMが届いたとき。毎日の「投稿しろ」通知はありません</p>
+      <div class="card" style="padding:20px;text-align:center;margin-bottom:12px"><div style="font-size:44px;margin-bottom:6px">🔔</div><div class="muted" style="font-size:13px;line-height:1.7">${canPush ? '通知をオンにして、フレンドの気持ちを受け取ろう' : isIOS ? 'iPhoneでは、Safariの共有ボタン ⬆︎ →「<b>ホーム画面に追加</b>」してから開くと通知を受け取れます' : 'このブラウザでは通知が使えません'}</div></div>
       <div style="flex:1;min-height:24px"></div>
       ${canPush ? `<button class="btn p w" style="height:54px" data-ob="push">通知をオンにする</button>` : ''}
       <button class="btn ${canPush ? '' : 'p'} w" style="margin-top:6px;${canPush ? 'color:var(--tx2)' : 'height:54px'}" data-ob="finish">${canPush ? 'あとで' : 'はじめる'}</button></div>`;
@@ -1626,6 +1717,7 @@ function handleDeepLink(q) {
   if (q.get('dm')) openChat(q.get('dm'));
   else if (q.get('moment')) { if (momentActive()) openComposer(); }
   else if (q.get('compose')) openComposer();
+  else if (q.get('giftto')) giftSheet(q.get('giftto'), q.get('post') || null);
   else if (q.get('gift')) giftsPage();
   else if (q.get('post')) { const p = S.posts.get(q.get('post')); if (p) openPost(p.id); }
   else if (q.get('relay')) relayPage(q.get('relay'));

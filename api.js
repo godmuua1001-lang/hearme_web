@@ -140,6 +140,7 @@ class LiveAPI {
   async gifts() { return this._r(await this.sb.rpc('my_gifts')) || []; }
   async openGift(id) { return this._r(await this.sb.rpc('open_gift', { p_id: id })); }
   async markListened(postId) { return this._r(await this.sb.rpc('mark_listened', { p_post: postId })); }
+  async todayRainbow() { return this._r(await this.sb.rpc('today_rainbow')); }
   async sameMood(mood) { return this._r(await this.sb.rpc('same_mood', { p_mood: mood })); }
   async postWhisper(text, mood, song) { return this._r(await this.sb.rpc('post_whisper', { p_text: text, p_mood: mood || '', p_song: song || null })); }
   async nightFeed() { return this._r(await this.sb.rpc('night_feed')) || []; }
@@ -224,7 +225,7 @@ function demoSeed() {
   ];
   const art = id => `https://is1-ssl.mzstatic.com/image/thumb/${id}/600x600bb.jpg`;
   const posts = [
-    { id: uuid(), user_id: 'd-yuki', title: '夜に駆ける', artist: 'YOASOBI', artwork: null, preview_url: null, track_url: null, mood: '🌙 しんみり', comment: '帰り道にぴったり', is_public: false, created_at: ago(35), on_time: true },
+    { id: uuid(), user_id: 'd-yuki', title: '夜に駆ける', artist: 'YOASOBI', artwork: null, preview_url: null, track_url: null, mood: '🥺 寂しい', comment: '帰り道にぴったり', is_public: false, created_at: ago(35), on_time: true },
     { id: uuid(), user_id: 'd-mio', title: 'Plastic Love', artist: '竹内まりや', artwork: null, preview_url: null, track_url: null, mood: '😊 嬉しい', comment: 'いい天気だった☀️', is_public: false, created_at: ago(140), on_time: false },
     { id: uuid(), user_id: 'x-1', title: 'マリーゴールド', artist: 'あいみょん', artwork: null, preview_url: null, track_url: null, mood: '😌 穏やか', comment: '', is_public: true, created_at: ago(12), on_time: true },
     { id: uuid(), user_id: 'x-2', title: '白日', artist: 'King Gnu', artwork: null, preview_url: null, track_url: null, mood: '💭 考え中', comment: 'ちょっと疲れた', is_public: true, created_at: ago(58), on_time: false },
@@ -255,7 +256,8 @@ class DemoAPI {
     const counts = {}; rs.forEach(r => counts[r.emoji] = (counts[r.emoji] || 0) + 1);
     const mine = p.user_id === this.uid;
     const anonEmo = ['🌙','🌊','🌸','⚡','🦋','🍂','☁️','🌿'][p.id.charCodeAt(2) % 8];
-    return { ...p, mine,
+    const listened = (this.db.listens || []).includes(p.id);
+    return { ...p, mine, has_comment: !!p.comment, comment: (mine || !p.preview_url || listened) ? p.comment : null, i_listened: listened,
       author: (showAuthor || mine) ? this.pub(this.person(p.user_id)) : { id: null, name: 'どこかの誰か', emoji: anonEmo, avatar: null },
       my_reaction: rs.find(r => r.user_id === this.uid)?.emoji || null, reactions: counts };
   }
@@ -306,6 +308,8 @@ class DemoAPI {
     const m = this.db.moment && Date.now() - new Date(this.db.moment).getTime() < 600000;
     const row = { id: uuid(), user_id: this.uid, created_at: now(), on_time: !!m, ...p };
     this.db.posts.push(row); this.save();
+    const twin = this.db.posts.find(x => x.user_id !== this.uid && this.isFriend(x.user_id) && x.title === row.title);
+    if (twin) this._notify('sync', `✨ ${this.person(twin.user_id).name}とシンクロ`, `今日、ふたりとも「${row.title}」を選びました`, `/?post=${twin.id}`, { friend: twin.user_id });
     const recent = this.db.posts.filter(x => x.user_id === this.uid).slice(-3);
     if (/死にたい|消えたい|もう無理|いなくなりたい/.test(p.comment || '') || (recent.length >= 3 && recent.every(x => /^(😢|🥺|😤)/.test(x.mood)))) this._notify('care', '🌙 少しだけ、話してみない？', 'つらい時は、ひとりで抱えなくていいよ', '/?care=1');
     // デモ：フレンドが少ししてリアクション
@@ -342,7 +346,15 @@ class DemoAPI {
   // v8 デモ実装（端末内）
   _v8() { const d = this.db; d.notifs ||= []; d.gifts ||= []; d.listens ||= []; d.whispers ||= []; d.relays ||= []; d.letters ||= []; d.notes ||= {}; d.nseq ||= 1; return d; }
   _notify(kind, title, body, url, data = {}) { const d = this._v8(); const n = { id: d.nseq++, user_id: this.uid, kind, title, body, url, data, created_at: now(), read_at: null }; d.notifs.unshift(n); this.save(); this.emit('notification', n); }
-  async notifications() { return this._v8().notifs.slice(0, 60); }
+  async notifications() {
+    const d = this._v8(); const today = new Date().toDateString();
+    const y = this.db.posts.find(p => p.user_id === 'd-yuki');
+    if (y && this.isFriend('d-yuki') && !d.notifs.some(n => n.kind === 'rain' && new Date(n.created_at).toDateString() === today)) {
+      d.notifs.push({ id: d.nseq++, kind: 'rain', title: '🌧 ゆーきの空が、雨みたい', body: '寄り添う1曲を贈る？', url: `/?giftto=d-yuki&post=${y.id}`, data: { friend: 'd-yuki', post: y.id }, created_at: now(), read_at: null });
+      this.save();
+    }
+    return d.notifs.slice(0, 60);
+  }
   async readNotifications() { this._v8().notifs.forEach(n => n.read_at ||= now()); this.save(); }
   async sendGift(to, song, message, anonymous) {
     const d = this._v8(); if (!this.isFriend(to)) throw new Error('NOT_ALLOWED');
@@ -352,7 +364,16 @@ class DemoAPI {
   }
   async gifts() { return this._v8().gifts; }
   async openGift(id) { const g = this._v8().gifts.find(x => x.id === id); if (g) g.opened_at ||= now(); this.save(); }
-  async markListened(postId) { const d = this._v8(); if (!d.listens.includes(postId)) { d.listens.push(postId); this.save(); } }
+  async markListened(postId) { const d = this._v8(); if (!d.listens.includes(postId)) { d.listens.push(postId); this.save(); } return { comment: this.db.posts.find(p => p.id === postId)?.comment ?? null }; }
+  async todayRainbow() {
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const ids = [this.uid, ...this.db.friends.map(f => f.id)];
+    const latest = {};
+    this.sorted([...this.db.posts]).reverse().forEach(p => { if (ids.includes(p.user_id) && new Date(p.created_at) >= start) latest[p.user_id] = p; });
+    const g = {};
+    Object.values(latest).forEach(p => { const e = (p.mood || '').split(' ')[0]; (g[e] ||= { e, n: 0, names: [], ids: [] }); g[e].n++; g[e].names.push(p.user_id === this.uid ? 'あなた' : this.person(p.user_id)?.name); g[e].ids.push(p.user_id); });
+    return { total: ids.length, waiting: ids.length - Object.keys(latest).length, me: latest[this.uid] ? latest[this.uid].mood.split(' ')[0] : null, moods: Object.values(g) };
+  }
   async sameMood(mood) {
     const e = (mood || '').split(' ')[0];
     const songs = this.db.posts.filter(p => p.is_public && p.user_id !== this.uid && (p.mood || '').startsWith(e)).map(p => ({ title: p.title, artist: p.artist, artwork: p.artwork, preview_url: p.preview_url, track_url: p.track_url }));
