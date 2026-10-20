@@ -46,7 +46,7 @@ async function askGemini(text: string): Promise<Idea[]> {
           contents: [{ role: "user", parts: [{ text: `今の気分：「${text}」` }] }],
           generationConfig,
         }),
-        signal: AbortSignal.timeout(9000),
+        signal: AbortSignal.timeout(15000),
       }).catch(() => null);
       if (!r) break;
       if (r.status !== 400) break;
@@ -134,7 +134,7 @@ const norm = (s: string) => s.toLowerCase().normalize("NFKC").replace(/[\s'’"�
 async function verify(i: Idea) {
   const q = new URLSearchParams({ term: `${i.title} ${i.artist}`, media: "music", entity: "song", limit: "8", country: "JP", lang: "ja_jp" });
   try {
-    const r = await fetch(`https://itunes.apple.com/search?${q}`, { signal: AbortSignal.timeout(3500) });
+    const r = await fetch(`https://itunes.apple.com/search?${q}`, { signal: AbortSignal.timeout(8000) });
     const d = await r.json();
     const want = norm(i.artist);
     const hit = (d.results ?? []).find((t: Record<string, string>) => {
@@ -224,6 +224,12 @@ Deno.serve(async (req) => {
   if (limErr) return json({ error: limErr.message.includes("AI_LIMIT") ? "AI_LIMIT" : "USAGE_ERROR" }, limErr.message.includes("AI_LIMIT") ? 429 : 500);
 
   try {
+    // raw：AIの候補だけをすぐ返し、実在確認はアプリ側（ユーザーの端末）で行う → いちばん速い
+    if (body.raw) {
+      const ideas = await ask(text);
+      if (!ideas.length) throw new Error("NO_SONGS");
+      return json({ ideas, left: Math.max(0, DAILY_LIMIT - Number(used ?? 0)), provider: PROVIDER });
+    }
     let songs = await verifyFast(await ask(text));
     // 1曲も実在確認できなかったときだけ聞き直す（待ち時間を短くするため）
     if (!songs.length) songs = await verifyFast(await ask(text + "（有名で確実に実在する曲で）"));

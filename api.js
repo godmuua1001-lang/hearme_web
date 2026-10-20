@@ -124,13 +124,27 @@ class LiveAPI {
 
   // ── AI選曲（Edge Function recommend） ──
   async recommend(text) {
-    const { data, error } = await this.sb.functions.invoke('recommend', { body: { text } });
+    const { data, error } = await this.sb.functions.invoke('recommend', { body: { text, raw: true } });
     if (error) {
       let code = '';
       try { code = (await error.context.json()).error; } catch { /* */ }
       throw new Error(code || error.message);
     }
-    return data;
+    if (data?.songs) return data;   // 古いサーバー（実在確認済みで返す版）
+    // AIの候補を、端末側で iTunes 検索して実在確認（3曲そろったら終わり）
+    const { search } = await import('./music.js');
+    const norm = s => String(s || '').toLowerCase().normalize('NFKC').replace(/[\s'’"“”・\-–—!！?？.,、。()（）]/g, '');
+    const found = await Promise.all((data?.ideas || []).map(async i => {
+      try {
+        const res = await search(`${i.title} ${i.artist}`, { limit: 6 });
+        const w = norm(i.artist);
+        const hit = res.find(t => { const a = norm(t.artist); return a && (a.includes(w) || w.includes(a)); });
+        return hit ? { ...hit, reason: i.reason } : null;
+      } catch { return null; }
+    }));
+    const seen = new Set(); const songs = [];
+    for (const s of found) { if (!s) continue; const k = norm(s.artist); if (seen.has(k)) continue; seen.add(k); songs.push(s); if (songs.length === 3) break; }
+    return { songs, left: data?.left, provider: data?.provider };
   }
 
   // ── v8：気持ちを届ける ──
