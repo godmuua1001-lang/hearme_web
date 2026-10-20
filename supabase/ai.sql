@@ -24,3 +24,12 @@ begin
 end $$;
 revoke all on function public.bump_ai_usage(uuid, int) from public, anon, authenticated;
 grant execute on function public.bump_ai_usage(uuid, int) to service_role;
+
+-- 失敗した回は回数を戻す
+create or replace function public.refund_ai_usage(p_user uuid) returns void
+language sql security definer set search_path = public as $$
+  update ai_usage set n = greatest(0, n - 1)
+  where user_id = p_user and day = (now() at time zone 'Asia/Tokyo')::date;
+$$;
+revoke all on function public.refund_ai_usage(uuid) from public, anon, authenticated;
+grant execute on function public.refund_ai_usage(uuid) to service_role;

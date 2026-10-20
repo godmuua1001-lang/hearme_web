@@ -111,6 +111,30 @@ async function verify(i: Idea) {
   } catch { return null; }
 }
 
+// 一時的な失敗（混雑・JSON崩れ）は1回だけ自動で再試行
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+async function ask(text: string): Promise<Idea[]> {
+  for (let i = 0; i < 2; i++) {
+    try {
+      const ideas = PROVIDER === "anthropic" ? await askClaude(text) : await askGemini(text);
+      if (ideas.length) return ideas;
+    } catch (e) {
+      if (i === 1) throw e;
+      if ((e as Error).message === "AI_BUSY") await sleep(1500);
+    }
+  }
+  return [];
+}
+// 同じアーティストは1曲まで
+function uniq<T extends { track_id: number; artist: string }>(list: (T | null)[]): T[] {
+  const ids = new Set<number>(), artists = new Set<string>();
+  return (list.filter(Boolean) as T[]).filter((s) => {
+    const a = norm(s.artist);
+    if (ids.has(s.track_id) || artists.has(a)) return false;
+    ids.add(s.track_id); artists.add(a); return true;
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method" }, 405);
@@ -129,19 +153,19 @@ Deno.serve(async (req) => {
   if (limErr) return json({ error: limErr.message.includes("AI_LIMIT") ? "AI_LIMIT" : "USAGE_ERROR" }, limErr.message.includes("AI_LIMIT") ? 429 : 500);
 
   try {
-    let ideas = PROVIDER === "anthropic" ? await askClaude(text) : await askGemini(text);
-    let songs = (await Promise.all(ideas.map(verify))).filter(Boolean);
-    // 実在する曲が少なければ1回だけ聞き直す
+    let songs = uniq(await Promise.all((await ask(text)).map(verify)));
+    // 実在する曲が3曲に満たなければ1回だけ聞き直す
     if (songs.length < 3) {
-      ideas = PROVIDER === "anthropic" ? await askClaude(text + "（有名で確実に実在する曲で）") : await askGemini(text + "（有名で確実に実在する曲で）");
-      const more = (await Promise.all(ideas.map(verify))).filter(Boolean);
-      const seen = new Set(songs.map((s) => s!.track_id));
-      songs = songs.concat(more.filter((s) => !seen.has(s!.track_id)));
+      const more = await Promise.all((await ask(text + "（有名で確実に実在する曲で）")).map(verify));
+      songs = uniq([...songs, ...more]);
     }
+    if (!songs.length) throw new Error("NO_SONGS");
     return json({ songs: songs.slice(0, 3), left: Math.max(0, DAILY_LIMIT - Number(used ?? 0)), provider: PROVIDER });
   } catch (e) {
     const msg = String((e as Error).message);
     console.error(msg);
+    // 失敗した回は回数に数えない
+    await admin.rpc("refund_ai_usage", { p_user: u.user.id }).then(() => {}, () => {});
     return json({ error: msg === "AI_BUSY" ? "AI_BUSY" : "AI_ERROR" }, msg === "AI_BUSY" ? 503 : 502);
   }
 });
