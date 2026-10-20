@@ -29,18 +29,26 @@ const SYSTEM = `あなたは日本の音楽にくわしい、やさしい選曲�
 async function askGemini(text: string): Promise<Idea[]> {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new Error("GEMINI_API_KEY not set");
-  const models = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"].filter(Boolean);
+  const models = [Deno.env.get("GEMINI_MODEL"), "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"].filter(Boolean) as string[];
   let last = "";
   for (const m of models) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ role: "user", parts: [{ text: `今の気分：「${text}」` }] }],
-        generationConfig: { temperature: 0.9, responseMimeType: "application/json", maxOutputTokens: 600 },
-      }),
-    });
+    // 選曲に「考える時間」は不要なので thinking をオフにして速くする（未対応モデルなら外して再試行）
+    let r: Response | null = null;
+    for (const noThink of [true, false]) {
+      const generationConfig: Record<string, unknown> = { temperature: 0.9, responseMimeType: "application/json", maxOutputTokens: 600 };
+      if (noThink) generationConfig.thinkingConfig = { thinkingBudget: 0 };
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM }] },
+          contents: [{ role: "user", parts: [{ text: `今の気分：「${text}」` }] }],
+          generationConfig,
+        }),
+      });
+      if (r.status !== 400) break;
+    }
+    if (!r) continue;
     if (r.status === 404) { last = `model ${m} not found`; continue; }
     if (r.status === 429) throw new Error("AI_BUSY");
     if (!r.ok) { last = `gemini ${r.status} ${(await r.text()).slice(0, 200)}`; continue; }

@@ -327,7 +327,7 @@ function renderComposer() {
 }
 function aiResults() {
   const a = C.ai;
-  if (a.loading) return `<div style="padding-top:12px">${'<div class="sk" style="height:62px;margin-bottom:8px;border-radius:14px"></div>'.repeat(3)}<div class="faint" style="font-size:12px;text-align:center">あなたの気分に合う曲を探しています…</div></div>`;
+  if (a.loading) return `<div style="padding-top:12px">${'<div class="sk" style="height:62px;margin-bottom:8px;border-radius:14px"></div>'.repeat(3)}<div class="faint" style="font-size:12px;text-align:center">あなたの気分に合う曲を探しています…（10秒ほどかかることがあります）</div></div>`;
   if (a.err) return `<div class="faint" style="font-size:12.5px;padding-top:10px">${esc(a.err)}</div>`;
   if (!a.songs.length) return '';
   return `<div style="padding-top:10px">${a.songs.map((s, i) => `<div class="ai-song tap" data-act="ai-pick" data-i="${i}">${art(s, 52)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600;font-size:14px">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px">${esc(s.artist)}</div>${s.reason ? `<div style="font-size:12px;color:var(--cr2);margin-top:3px">💬 ${esc(s.reason)}</div>` : ''}</div>${playBtn(s, 'dim')}</div>`).join('')}
