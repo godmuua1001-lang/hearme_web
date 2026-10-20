@@ -1,6 +1,6 @@
 // hearme service worker — オフライン起動 & プッシュ通知
-const V = 'hearme-v7.1.0';
-const SHELL = ['/', '/index.html', '/styles.css?v=7.1.0', '/app.js?v=7.1.0', '/api.js', '/music.js', '/config.js',
+const V = 'hearme-v8.0.0';
+const SHELL = ['/', '/index.html', '/styles.css?v=8.0.0', '/app.js?v=8.0.0', '/api.js', '/music.js', '/config.js',
   '/manifest.json', '/logo-mark.png', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/favicon-32.png', '/terms.html', '/privacy.html', '/legal.css'];
 
 self.addEventListener('install', e => {

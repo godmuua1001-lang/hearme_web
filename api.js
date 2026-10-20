@@ -10,6 +10,14 @@ const ERR = {
   NOT_ALLOWED: 'この操作はできません',
   NOT_SIGNED_IN: 'ログインし直してください',
   TOO_MANY_TRIES: '試行回数が多すぎます。しばらく時間をおいてね',
+  GIFT_LIMIT: '今日はもうたくさん贈りました。また明日！',
+  NOT_NIGHT: 'ひとりごとは夜22時〜朝6時だけ開いています',
+  WHISPER_LIMIT: '今夜はもう5回つぶやきました',
+  RELAY_TWICE: '連続ではつなげません。誰かが次をつなぐのを待ってね',
+  RELAY_ENDED: 'このリレーは終わりました',
+  RELAY_FULL: 'このリレーは30曲で完成しました',
+  RELAY_LIMIT: 'リレーは1日3つまでです',
+  LETTER_LIMIT: '届く前の手紙は20通までです',
   AI_LIMIT: '今日のAI選曲は上限に達しました。また明日！',
   AI_BUSY: 'AIが混み合っています。少し待ってもう一度試してね',
   AI_ERROR: 'AIがうまく答えられませんでした。言い方を変えて試してね',
@@ -125,6 +133,33 @@ class LiveAPI {
     return data;
   }
 
+  // ── v8：気持ちを届ける ──
+  async notifications() { return this._r(await this.sb.rpc('my_notifications', { p_limit: 60 })) || []; }
+  async readNotifications() { return this._r(await this.sb.rpc('read_notifications')); }
+  async sendGift(to, song, message, anonymous, postId) { return this._r(await this.sb.rpc('send_gift', { p_to: to, p_song: song, p_message: message || '', p_anonymous: !!anonymous, p_post: postId || null })); }
+  async gifts() { return this._r(await this.sb.rpc('my_gifts')) || []; }
+  async openGift(id) { return this._r(await this.sb.rpc('open_gift', { p_id: id })); }
+  async markListened(postId) { return this._r(await this.sb.rpc('mark_listened', { p_post: postId })); }
+  async sameMood(mood) { return this._r(await this.sb.rpc('same_mood', { p_mood: mood })); }
+  async postWhisper(text, mood, song) { return this._r(await this.sb.rpc('post_whisper', { p_text: text, p_mood: mood || '', p_song: song || null })); }
+  async nightFeed() { return this._r(await this.sb.rpc('night_feed')) || []; }
+  async hugWhisper(id) { return this._r(await this.sb.rpc('hug_whisper', { p_id: id })); }
+  async reportWhisper(id, reason) { return this._r(await this.sb.rpc('report_whisper', { p_id: id, p_reason: reason })); }
+  async startRelay(theme, song, note) { return this._r(await this.sb.rpc('start_relay', { p_theme: theme, p_song: song, p_note: note || '' })); }
+  async addRelaySong(id, song, note) { return this._r(await this.sb.rpc('add_relay_song', { p_relay: id, p_song: song, p_note: note || '' })); }
+  async relays() { return this._r(await this.sb.rpc('my_relays')) || []; }
+  async writeLetter(song, text, mood, days) { return this._r(await this.sb.rpc('write_letter', { p_song: song, p_text: text || '', p_mood: mood || '', p_days: days })); }
+  async letters() { return this._r(await this.sb.rpc('my_letters')) || []; }
+  async openNote(friend) { return this._r(await this.sb.rpc('open_note', { p_friend: friend })); }
+  async addNoteEntry(friend, song, text) { return this._r(await this.sb.rpc('add_note_entry', { p_friend: friend, p_song: song, p_text: text || '' })); }
+  async notes() { return this._r(await this.sb.rpc('my_notes')) || []; }
+  async pairPlaylist(friend) { return this._r(await this.sb.rpc('pair_playlist', { p_friend: friend })); }
+  async recap(items) {
+    const { data, error } = await this.sb.functions.invoke('recommend', { body: { mode: 'recap', items } });
+    if (error) { let code = ''; try { code = (await error.context.json()).error; } catch { /* */ } throw new Error(code || error.message); }
+    return data;
+  }
+
   // ── DM ──
   async threads() { return this._r(await this.sb.rpc('dm_threads')) || []; }
   async messages(peer, beforeId) {
@@ -158,6 +193,7 @@ class LiveAPI {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, p => { if (p.new?.user_id !== me) this.emit('reaction', p.new); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, p => { if (p.new?.user_id !== me) this.emit('post', p.new); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'moments' }, p => this.emit('moment', p.new))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${me}` }, p => this.emit('notification', p.new))
       .subscribe(s => this.emit('status', s));
   }
   stop() { if (this.ch) { this.sb.removeChannel(this.ch); this.ch = null; } Object.values(this.typingCh).forEach(c => this.sb.removeChannel(c)); this.typingCh = {}; }
@@ -270,6 +306,8 @@ class DemoAPI {
     const m = this.db.moment && Date.now() - new Date(this.db.moment).getTime() < 600000;
     const row = { id: uuid(), user_id: this.uid, created_at: now(), on_time: !!m, ...p };
     this.db.posts.push(row); this.save();
+    const recent = this.db.posts.filter(x => x.user_id === this.uid).slice(-3);
+    if (/死にたい|消えたい|もう無理|いなくなりたい/.test(p.comment || '') || (recent.length >= 3 && recent.every(x => /^(😢|🥺|😤)/.test(x.mood)))) this._notify('care', '🌙 少しだけ、話してみない？', 'つらい時は、ひとりで抱えなくていいよ', '/?care=1');
     // デモ：フレンドが少ししてリアクション
     setTimeout(() => {
       const f = this.db.friends[0]; if (!f) return;
@@ -301,6 +339,50 @@ class DemoAPI {
     for (const [t, a, reason] of pick) { const [s] = await search(`${t} ${a}`, { limit: 3 }).catch(() => []); if (s) songs.push({ ...s, reason }); }
     void text; return { songs, left: 9, provider: 'demo' };
   }
+  // v8 デモ実装（端末内）
+  _v8() { const d = this.db; d.notifs ||= []; d.gifts ||= []; d.listens ||= []; d.whispers ||= []; d.relays ||= []; d.letters ||= []; d.notes ||= {}; d.nseq ||= 1; return d; }
+  _notify(kind, title, body, url, data = {}) { const d = this._v8(); const n = { id: d.nseq++, user_id: this.uid, kind, title, body, url, data, created_at: now(), read_at: null }; d.notifs.unshift(n); this.save(); this.emit('notification', n); }
+  async notifications() { return this._v8().notifs.slice(0, 60); }
+  async readNotifications() { this._v8().notifs.forEach(n => n.read_at ||= now()); this.save(); }
+  async sendGift(to, song, message, anonymous) {
+    const d = this._v8(); if (!this.isFriend(to)) throw new Error('NOT_ALLOWED');
+    d.gifts.unshift({ id: uuid(), song, message, anonymous, created_at: now(), opened_at: null, received: false, from: this.pub(this.db.profile), to: this.pub(this.person(to)) }); this.save();
+    setTimeout(() => { const f = this.person(to); d.gifts.unshift({ id: uuid(), song: { title: '水平線', artist: 'back number' }, message: 'お返し！', anonymous: false, created_at: now(), opened_at: null, received: true, from: this.pub(f), to: this.pub(this.db.profile) }); this.save(); this._notify('gift', `🎁 ${f.name}が曲を贈ってくれました`, '「水平線」 — お返し！', '/?gift=demo'); }, 5000);
+    return { id: 'ok' };
+  }
+  async gifts() { return this._v8().gifts; }
+  async openGift(id) { const g = this._v8().gifts.find(x => x.id === id); if (g) g.opened_at ||= now(); this.save(); }
+  async markListened(postId) { const d = this._v8(); if (!d.listens.includes(postId)) { d.listens.push(postId); this.save(); } }
+  async sameMood(mood) {
+    const e = (mood || '').split(' ')[0];
+    const songs = this.db.posts.filter(p => p.is_public && p.user_id !== this.uid && (p.mood || '').startsWith(e)).map(p => ({ title: p.title, artist: p.artist, artwork: p.artwork, preview_url: p.preview_url, track_url: p.track_url }));
+    return { count: 3 + songs.length, songs: songs.length ? songs : this.db.posts.filter(p => p.is_public).slice(0, 3).map(p => ({ title: p.title, artist: p.artist, artwork: p.artwork, preview_url: p.preview_url })) };
+  }
+  async postWhisper(text, mood, song) { const d = this._v8(); d.whispers.unshift({ id: uuid(), text, mood, song, created_at: now(), mine: true, emoji: '🌙', hugs: 0 }); this.save(); return { id: 'w' }; }
+  async nightFeed() {
+    const d = this._v8();
+    if (!d.whispers.some(w => !w.mine)) d.whispers.push({ id: uuid(), text: '明日のテスト、こわいな', mood: '🥺 寂しい', song: null, created_at: ago(20), mine: false, emoji: '🌊' }, { id: uuid(), text: 'この曲で眠れそう', mood: '😌 穏やか', song: { title: 'Lemon', artist: '米津玄師' }, created_at: ago(55), mine: false, emoji: '⭐' });
+    return d.whispers;
+  }
+  async hugWhisper(id) { const w = this._v8().whispers.find(x => x.id === id); if (w) w.hugged = true; this.save(); }
+  async reportWhisper() { return true; }
+  async startRelay(theme, song, note) { const d = this._v8(); const r = { id: uuid(), theme, created_at: now(), ends_at: new Date(Date.now() + 7 * 864e5).toISOString(), creator: this.pub(this.db.profile), songs: [{ id: 1, song, note, mine: true, by: this.pub(this.db.profile), created_at: now() }] }; d.relays.unshift(r); this.save(); return { id: r.id }; }
+  async addRelaySong(id, song, note) { const r = this._v8().relays.find(x => x.id === id); if (!r) throw new Error('NOT_ALLOWED'); if (r.songs[r.songs.length - 1]?.mine) throw new Error('RELAY_TWICE'); r.songs.push({ id: r.songs.length + 1, song, note, mine: true, by: this.pub(this.db.profile), created_at: now() }); this.save(); }
+  async relays() {
+    const d = this._v8();
+    if (!d.relays.some(r => !r.creator || r.creator.id !== this.uid)) {
+      const f = this.db.friends[0];
+      if (f) d.relays.push({ id: 'demo-relay', theme: '雨の日に聴きたい曲', created_at: ago(300), ends_at: new Date(Date.now() + 5 * 864e5).toISOString(), creator: this.pub(f), songs: [{ id: 1, song: { title: '傘', artist: 'King Gnu' }, note: 'はじまり', mine: false, by: this.pub(f), created_at: ago(300) }] });
+    }
+    return d.relays;
+  }
+  async writeLetter(song, text, mood, days) { const d = this._v8(); const l = { id: uuid(), created_at: now(), deliver_at: new Date(Date.now() + days * 864e5).toISOString(), delivered_at: null, _song: song, _text: text, _mood: mood }; d.letters.unshift(l); this.save(); return { id: l.id, deliver_at: l.deliver_at }; }
+  async letters() { return this._v8().letters.map(l => ({ ...l, song: l.delivered_at ? l._song : null, text: l.delivered_at ? l._text : null })); }
+  async openNote(friend) { const d = this._v8(); d.notes[friend] ||= { id: 'n-' + friend, created_at: now(), entries: [{ id: 1, song: { title: 'Plastic Love', artist: '竹内まりや' }, text: '今日はこれ！', day: new Date(Date.now() - 864e5).toISOString().slice(0, 10), mine: false, created_at: ago(1500) }] }; this.save(); return d.notes[friend]; }
+  async addNoteEntry(friend, song, text) { const n = await this.openNote(friend); const day = new Date().toISOString().slice(0, 10); n.entries = n.entries.filter(e => !(e.mine && e.day === day)); n.entries.unshift({ id: Date.now(), song, text, day, mine: true, created_at: now() }); this.save(); }
+  async notes() { const d = this._v8(); return Object.entries(d.notes).map(([fid, n]) => ({ id: n.id, friend: this.pub(this.person(fid)), days: new Set(n.entries.map(e => e.day)).size, last: n.entries[0]?.created_at, today_me: n.entries.some(e => e.mine && e.day === new Date().toISOString().slice(0, 10)), today_them: false })); }
+  async pairPlaylist(friend) { return { since: ago(60 * 24 * 30), songs: this.db.posts.filter(p => p.user_id === this.uid || p.user_id === friend).map(p => ({ title: p.title, artist: p.artist, artwork: p.artwork, preview_url: p.preview_url, mine: p.user_id === this.uid, from: 'post', mood: p.mood })) }; }
+  async recap(items) { void items; return { title: '雨のち、少し晴れ', summary: '月のはじめは静かな曲が多かったけれど、後半は明るい曲が増えてきました。ちゃんと自分の気持ちに寄り添えていた1ヶ月です。', word: '来月も、好きな曲と一緒に。' }; }
   fireMoment() { this.db.moment = now(); this.save(); this.emit('moment', { at: this.db.moment }); }
   pairMsgs(peer) { return this.db.messages.filter(m => (m.sender === this.uid && m.receiver === peer) || (m.sender === peer && m.receiver === this.uid)); }
   async threads() {

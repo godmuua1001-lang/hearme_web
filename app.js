@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '7.1.0';
+const VERSION = '8.0.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -218,7 +218,7 @@ function postCard(p) {
   const locked = !p.mine && !postedToday().length;
   const a = p.author || {};
   const rx = REACTS.map(e => {
-    const n = p.reactions?.[e] || 0; const on = p.my_reaction === e;
+    const n = p.mine ? (p.reactions?.[e] || 0) : 0; const on = p.my_reaction === e;   // ⑤ 数字は本人にだけ
     return `<button class="rx ${on ? 'on' : ''}" data-act="react" data-id="${p.id}" data-e="${e}">${e}${n ? `<b>${n}</b>` : ''}</button>`;
   }).join('');
   const [me, ml] = splitMood(p.mood);
@@ -230,6 +230,8 @@ function postCard(p) {
     ${p.comment ? `<div class="cm">${esc(p.comment)}</div>` : ''}
     <div class="mood"><span class="chip">${esc(me)} ${esc(ml)}</span></div>
     ${locked ? '' : `<div class="reacts">${rx}</div>`}
+    ${locked ? '' : p.mine ? `<div class="post-foot">${p.listened ? `<span>🎧 ${p.listened}人が聴いてくれた</span>` : '<span class="faint">まだ誰も聴いていません</span>'}<button data-act="same-mood" data-m="${esc(p.mood)}">${esc(me)} 同じ気持ちの人</button></div>`
+      : (p.author?.id && S.friends.some(f => f.id === p.author.id)) ? `<div class="post-foot"><span class="faint">${p.i_listened ? '🎧 聴いた' : ''}</span><button data-act="gift" data-id="${esc(p.author.id)}" data-post="${p.id}">🎁 曲を贈る</button></div>` : ''}
     ${locked ? `<div class="lockmsg"><div style="font-size:26px">🔒</div><b>今日の1曲をシェアすると見られます</b><button class="btn p sm" data-act="compose">シェアする</button></div>` : ''}
   </article>`;
 }
@@ -256,6 +258,7 @@ function renderHome() {
 
   el.innerHTML = `
     <div class="hd"><div class="logo"><img src="/logo-mark.png" alt=""><span>hearme</span></div>
+      <button class="icon-btn" data-act="inbox" aria-label="おしらせ">${I.bell}<span class="badge bell-badge hide"></span></button>
       <button class="icon-btn" data-act="add-friend" aria-label="フレンド追加">${I.userplus}</button></div>
     <div class="ptr" id="ptr">↓ 引っ張って更新</div>
     ${showInstallCard() ? `<div class="cta" style="background:rgba(233,228,216,.05);border-color:var(--ln2)"><div class="ic" style="background:var(--s3)"><img src="/icon-192.png" alt="" style="width:30px;border-radius:8px"></div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">アプリとして使う</div><div class="muted" style="font-size:11.5px;margin-top:2px">ホーム画面に追加すると通知も届きます</div></div><button class="btn p sm" data-act="install-app">追加</button><button class="faint" style="padding:6px" data-act="install-dismiss" aria-label="閉じる">✕</button></div>` : ''}
@@ -267,9 +270,14 @@ function renderHome() {
       <div class="story add" data-act="add-friend"><div class="ring">${`<div class="ava" style="width:54px;height:54px">${I.plus.replace('<svg', '<svg width="20" height="20"')}</div>`}</div><small>招待</small></div>
     </div>
     ${posted ? '' : `<div class="cta tap" data-act="compose"><div class="ic">${I.note}</div><div style="flex:1"><div style="font-weight:600;font-size:15px">今日の1曲をシェア</div><div class="muted" style="font-size:12px;margin-top:2px">シェアするとフレンドの曲が見られます</div></div><div class="faint">›</div></div>`}
+    ${nightCardHTML()}
+    ${recoveryHTML()}
+    ${S.mode === 'friends' ? weatherHTML() : ''}
+    ${S.mode === 'friends' ? relayCardsHTML() : ''}
     <div style="padding:0 16px 12px"><div class="seg"><button class="${S.mode === 'friends' ? 'on' : ''}" data-act="mode" data-m="friends">フレンド</button><button class="${S.mode === 'public' ? 'on' : ''}" data-act="mode" data-m="public">みんな</button></div></div>
     ${feedHTML}
     <div style="height:90px"></div>`;
+  bell();
 }
 
 // pull to refresh
@@ -292,7 +300,7 @@ function renderHome() {
 const C = { song: null, mood: null, comment: '', pub: false, results: [], q: '', ctrl: null, ai: { q: '', loading: false, songs: [], err: '', left: null } };
 function openComposer(prefill) {
   if (!leftToday()) { toast('今日はもう3回シェアしました。また明日！'); return; }
-  Object.assign(C, { song: prefill || null, mood: null, comment: '', pub: false, results: [], q: '' });
+  Object.assign(C, { song: prefill || null, mood: null, comment: '', pub: false, results: [], q: '', mx: null, my: null });
   C.ai = { q: '', loading: false, songs: [], err: '', left: C.ai?.left ?? null };
   openSheet(`<div id="cmp"></div>`, { full: true });
   renderComposer();
@@ -316,7 +324,8 @@ function renderComposer() {
          <div id="cmp-res" style="padding-top:6px">${C.results.map((s, i) => `<div class="res" data-act="pick" data-i="${i}">${art(s)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(s.artist)}</div></div>${playBtn(s, 'dim')}</div>`).join('') ||
            (C.q ? '' : `<div class="faint" style="padding:18px;font-size:13px;text-align:center">いま頭の中で流れている曲は？</div>`)}</div>`}
     ${C.song ? `
-    <div class="sec" style="padding-top:20px"><span class="lbl">今の気分</span></div>
+    <div class="sec" style="padding-top:20px"><span class="lbl">今の気分</span><span class="faint" style="font-size:11px">なぞる or えらぶ</span></div>
+    <div style="padding:0 18px 10px">${padHTML()}</div>
     <div class="moods">${MOODS.map(([e, l]) => `<button class="md ${C.mood === e + ' ' + l ? 'on' : ''}" data-act="mood" data-m="${e} ${l}"><span>${e}</span><small>${l}</small></button>`).join('')}</div>
     <div class="sec" style="padding-top:20px"><span class="lbl">ひとこと（なくてもOK）</span><span class="faint" style="font-size:11px" id="cmp-n">${C.comment.length}/60</span></div>
     <div style="padding:0 18px"><textarea class="inp" id="cmp-c" rows="2" maxlength="60" placeholder="この曲を選んだ理由とか">${esc(C.comment)}</textarea></div>
@@ -324,6 +333,7 @@ function renderComposer() {
     <div class="faint" style="text-align:center;font-size:12px;padding:6px 0 30px">今日はあと${leftToday()}回シェアできます</div>` : ''}`;
   const q = $('#cmp-q');
   if (q) q.oninput = () => { C.q = q.value; searchDebounced(); };
+  bindPad();
   const aq = $('#ai-q');
   if (aq) { aq.oninput = () => { C.ai.q = aq.value; }; aq.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); askAI(); } }; }
   const c = $('#cmp-c');
@@ -381,9 +391,12 @@ async function submitPost() {
       preview_url: PREVIEW_RE.test(C.song.preview_url || '') ? C.song.preview_url : null,
       track_url: TRACK_RE.test(C.song.track_url || '') ? C.song.track_url : null,
       mood: C.mood, comment: C.comment.trim().slice(0, 60), is_public: C.pub,
+      ...(C.mx != null ? { mood_x: C.mx, mood_y: C.my } : {}),
     });
+    const postedMood = C.mood;
     buzz([10, 40, 10]); closeSheet(); toast(momentActive() ? '⚡ オンタイムでシェアしました！' : '🎵 シェアしました');
     hideMoment(); setTab('home'); await loadFeeds();
+    setTimeout(() => sameMoodSheet(postedMood), 700);   // ③ 同じ気持ちの人
   } catch (e) { toast(errText(e)); b.disabled = false; b.textContent = 'シェア'; }
 }
 
@@ -405,7 +418,8 @@ function openPost(id) {
       <div class="reacts">${REACTS.map(e => `<button class="rx ${p.my_reaction === e ? 'on' : ''}" data-act="react" data-id="${p.id}" data-e="${e}">${e}${p.reactions?.[e] ? `<b>${p.reactions[e]}</b>` : ''}</button>`).join('')}</div>
     </div>
     ${canDM ? `<div style="padding:0 20px 12px"><div class="composer" style="border:none;padding:0;background:none"><textarea id="reply" rows="1" placeholder="${esc(a.name)}に返信…" maxlength="1000"></textarea><button class="send" data-act="reply" data-id="${p.id}" aria-label="送信">${I.send}</button></div><div class="faint" style="font-size:11.5px;margin-top:6px;padding-left:4px">この曲をつけてDMで送ります</div></div>` : ''}
-    <div style="padding:4px 20px 24px;display:flex;gap:8px">${p.mine ? `<button class="btn d sm" data-act="del-post" data-id="${p.id}">投稿を削除</button>` : `<button class="btn g sm" data-act="share-song" data-id="${p.id}">この曲で投稿</button><button class="btn g sm" data-act="post-menu" data-id="${p.id}">…</button>`}</div>`);
+    <div style="padding:4px 20px 24px;display:flex;gap:8px;flex-wrap:wrap">${p.mine ? `<button class="btn g sm" data-act="story-post" data-id="${p.id}">📸 ストーリーに</button><button class="btn g sm" data-act="same-mood" data-m="${esc(p.mood)}">同じ気持ちの人</button><button class="btn d sm" data-act="del-post" data-id="${p.id}">削除</button>`
+      : `${canDM ? `<button class="btn g sm" data-act="gift" data-id="${esc(a.id)}" data-post="${p.id}">🎁 曲を贈る</button>` : ''}<button class="btn g sm" data-act="share-song" data-id="${p.id}">この曲で投稿</button><button class="btn g sm" data-act="post-menu" data-id="${p.id}">…</button>`}</div>`);
   updateProgress();
 }
 
@@ -583,6 +597,12 @@ function renderMe() {
     <div style="display:flex;gap:8px;padding:0 16px 14px"><button class="btn p" style="flex:1;height:44px;font-size:14px" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g" style="flex:1;height:44px;font-size:14px" data-act="add-friend">コードで追加</button></div>
     ${api.user()?.anonymous && S.mine.length ? `<div class="demo" data-act="settings" style="cursor:pointer">🔐 今は匿名アカウントです。機種変更やブラウザのデータ削除で消えないよう、<b>メールを登録</b>しておこう →</div>` : ''}
     <div class="card stats"><div><b>${S.mine.length}</b><small>シェア</small></div><div><b>${S.friends.length}</b><small>フレンド</small></div><div><b>${streak()}</b><small>連続日数🔥</small></div></div>
+    <div class="me-grid">
+      <button class="me-tile" data-act="recap"><span>🗓</span><b>今月のきもち</b><small>ふり返り・画像に</small></button>
+      <button class="me-tile" data-act="letters"><span>💌</span><b>未来の自分へ</b><small>曲を手紙にして送る</small></button>
+      <button class="me-tile" data-act="notes"><span>📓</span><b>交換ノート</b><small>2人だけで1日1曲</small></button>
+      <button class="me-tile" data-act="gifts"><span>🎁</span><b>贈りもの</b><small>届いた曲・贈った曲</small></button>
+    </div>
     <div class="card box"><h3>きもちログ（2週間）</h3><div class="cal">${cal.join('')}</div></div>
     ${S.activity.length ? `<div class="card box"><h3>届いたリアクション</h3>${S.activity.slice(0, 8).map(a => `<div class="li">${ava(a.who, 34)}<div style="flex:1;min-width:0;font-size:13px"><b>${esc(a.who?.name)}</b> が <span class="ellip">「${esc(a.post?.title)}」</span>に ${esc(a.emoji)}</div><div class="faint" style="font-size:11px">${rel(a.created_at)}</div></div>`).join('')}</div>` : ''}
     <div class="card box"><h3>フレンド（${S.friends.length}）</h3>${S.friends.length ? S.friends.map(f => `<div class="li">${ava(f, 42)}<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px" class="ellip">${esc(f.name)}</div><div class="faint ellip" style="font-size:12px">${f.last_post ? `🎵 ${esc(f.last_post.title)} · ${rel(f.last_post.created_at)}` : esc(f.bio || 'まだシェアなし')}</div></div><button class="btn g sm" data-act="chat" data-id="${esc(f.id)}">DM</button><button class="icon-btn" style="width:32px;height:32px;background:none;border:none" data-act="friend-menu" data-id="${esc(f.id)}">${I.more}</button></div>`).join('') : `<div class="faint" style="font-size:13px">まだいません。招待リンクを送ってみよう</div>`}</div>
@@ -716,6 +736,9 @@ function friendMenu(id) {
   const f = S.friends.find(x => x.id === id); if (!f) return;
   openSheet(`<div style="padding:0 18px 24px"><div class="row" style="padding:4px 4px 16px">${ava(f, 48)}<div><div style="font-weight:700;font-size:16px">${esc(f.name)}</div><div class="faint" style="font-size:12px">${esc(f.bio || 'フレンド')}</div></div></div>
     <button class="btn g w" data-act="chat" data-id="${esc(id)}">💬 DMを送る</button>
+    <button class="btn g w" style="margin-top:8px" data-act="gift" data-id="${esc(id)}">🎁 曲を贈る</button>
+    <button class="btn g w" style="margin-top:8px" data-act="note" data-id="${esc(id)}">📓 交換ノート</button>
+    <button class="btn g w" style="margin-top:8px" data-act="pair" data-id="${esc(id)}">🎂 2人のプレイリスト</button>
     <button class="btn g w" style="margin-top:8px" data-act="unfriend" data-id="${esc(id)}">フレンドを解除</button>
     <button class="btn d w" style="margin-top:8px" data-act="block" data-id="${esc(id)}">ブロック</button>
     <button class="btn g w" style="margin-top:8px" data-act="report-user" data-id="${esc(id)}">通報</button></div>`);
@@ -802,6 +825,7 @@ function songBySrc(src) {
   for (const p of S.posts.values()) if (p.preview_url === src) return p;
   for (const s of [...S.chart, ...C.results, ...X.results, ...C.ai.songs]) if (s.preview_url === src) return s;
   for (const m of S.chat?.msgs || []) if (m.song?.preview_url === src) return m.song;
+  if (S.extraSongs?.has(src)) return S.extraSongs.get(src);
   const st = music.player.state(); if (st.song?.preview_url === src) return st.song;
   return null;
 }
@@ -939,6 +963,440 @@ const A = {
   'moment-go': () => { hideMoment(); openComposer(); },
   'moment-skip': () => hideMoment(),
 };
+// ═══════════════════════════════════════════════════════════════
+// v8 ── 「気持ちを届ける」15機能
+// ═══════════════════════════════════════════════════════════════
+const V8 = { notifs: [], gifts: [], relays: [], letters: [], notes: [], night: [], careShown: false, listened: new Set(), G: null, sub: null };
+const tone = m => { const e = splitMood(m || '')[0]; return ['😊', '🤩', '🔥', '🥰'].includes(e) ? 1 : ['😢', '🥺', '😤'].includes(e) ? -1 : 0; };
+const WEATHER = m => { const e = splitMood(m || '')[0]; return e === '😴' ? '🌙' : e === '😤' ? '⛈️' : tone(m) > 0 ? '☀️' : tone(m) < 0 ? '🌧️' : '⛅'; };
+const songOf = s => s ? ({ title: String(s.title || '').slice(0, 200), artist: String(s.artist || '').slice(0, 200),
+  artwork: ART_RE.test(s.artwork || '') ? s.artwork : null, preview_url: PREVIEW_RE.test(s.preview_url || '') ? s.preview_url : null,
+  track_url: TRACK_RE.test(s.track_url || '') ? s.track_url : null, track_id: s.track_id || null }) : null;
+const isNight = () => { const h = new Date().getHours(); return h >= 22 || h < 6; };
+const songMini = (s, extra = '') => `<div class="song" style="padding:8px">${art(s, 46)}<div class="meta"><div class="ti ellip" style="font-size:14px">${esc(s?.title)}</div><div class="ar ellip">${esc(s?.artist)}</div></div>${playBtn(s, 'dim')}${extra}</div>`;
+function remember2(list) { list.forEach(s => { if (s?.preview_url) S.extraSongs.set(s.preview_url, s); }); return list; }
+S.extraSongs = new Map();
+
+// ── 汎用サブページ ──
+function openSub(html, onMount) {
+  const pg = $('#pg-sub'); pg.innerHTML = html; pg.querySelector('.page-body')?.scrollTo(0, 0);
+  if (!pageStack.includes('pg-sub')) openPage('pg-sub'); onMount?.(pg);
+}
+const subHead = (title, right = '') => `<div class="page-hd"><button class="back" data-act="close-page">${I.back}</button><div class="ttl disp ellip" style="font-size:18px">${title}</div>${right}</div>`;
+
+// ── 通知（受信箱） ──
+async function loadNotifs() { try { V8.notifs = await api.notifications(); } catch { /* v8.sql 未適用など */ } bell(); checkCare(); }
+function bell() { const n = V8.notifs.filter(x => !x.read_at && x.kind !== 'care').length; $$('.bell-badge').forEach(b => { b.textContent = n > 9 ? '9+' : n; b.classList.toggle('hide', !n); }); }
+function openInbox() {
+  const list = V8.notifs.filter(n => n.kind !== 'care');
+  openSheet(`<div style="padding:0 0 20px"><div class="disp" style="text-align:center;font-size:18px;margin-bottom:10px">おしらせ</div>
+    ${list.length ? list.map(n => `<div class="th" data-act="notif-go" data-url="${esc(n.url)}" style="${n.read_at ? '' : 'background:rgba(107,149,255,.06)'}"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:${n.read_at ? 500 : 700}">${esc(n.title)}</div>${n.body ? `<div class="pv ellip">${esc(n.body)}</div>` : ''}</div><div class="tm faint" style="font-size:11px">${rel(n.created_at)}</div></div>`).join('')
+      : `<div class="empty"><span class="e-ic">🔔</span>まだおしらせはありません</div>`}</div>`, { full: list.length > 6 });
+  api.readNotifications().then(() => { V8.notifs.forEach(n => n.read_at ||= new Date().toISOString()); bell(); }).catch(() => {});
+}
+function routeURL(url) {
+  try { closeSheet(); handleDeepLink(new URL(url, location.origin).searchParams); } catch { /* */ }
+}
+
+// ── ⑮ 見守り ──
+const HOTLINES = [
+  ['24時間子供SOSダイヤル', '0120-0-78310', '24時間・無料・子ども向け'],
+  ['チャイルドライン', '0120-99-7777', '18歳まで・無料'],
+  ['よりそいホットライン', '0120-279-338', '無料・どんな悩みでも'],
+  ['いのちの電話', '0120-783-556', '無料'],
+  ['こころの健康相談統一ダイヤル', '0570-064-556', '各都道府県の窓口につながります（通話料あり）'],
+];
+function checkCare() {
+  const c = V8.notifs.find(n => n.kind === 'care' && !n.read_at && isToday(n.created_at));
+  if (c && !V8.careShown) { V8.careShown = true; V8.carePending = true; setTimeout(careSheet, 800); }
+}
+function careSheet() {
+  V8.carePending = false; V8.careOpen = true;
+  openSheet(`<div style="padding:4px 22px 26px">
+    <div style="text-align:center;font-size:40px;margin-bottom:6px">🌙</div>
+    <div class="disp" style="font-size:21px;text-align:center;margin-bottom:8px">少しだけ、話してみない？</div>
+    <div class="muted" style="font-size:13.5px;line-height:1.8;text-align:center;margin-bottom:16px">最近つらい気持ちが続いているみたい。<br>ひとりで抱えなくて大丈夫。話を聞いてくれる人がいます。<br><span class="faint" style="font-size:12px">（この案内はあなたにだけ表示されています）</span></div>
+    ${HOTLINES.map(([n, t, d]) => `<a class="set-row" style="border:1px solid var(--ln);border-radius:14px;margin-bottom:8px;text-decoration:none;color:inherit" href="tel:${t.replace(/-/g, '')}"><div class="grow"><b>${n}</b><small>${t}　${d}</small></div><span style="font-size:18px">📞</span></a>`).join('')}
+    <a class="faint" style="display:block;text-align:center;font-size:12.5px;margin:10px 0 14px" href="https://shienjoho.go.jp/" target="_blank" rel="noopener">ほかの相談窓口（チャット・SNS相談もあります）↗</a>
+    <button class="btn g w" data-act="care-ok">ありがとう、大丈夫</button></div>`, { full: true, onClose: () => { V8.careOpen = false; } });
+  api.readNotifications().catch(() => {});
+}
+
+// ── ① 曲を贈る ──
+function giftSheet(friendId, postId) {
+  const f = S.friends.find(x => x.id === friendId); if (!f) { toast('フレンドにだけ贈れます'); return; }
+  const p = postId ? S.posts.get(postId) : null;
+  V8.G = V8.G?.to === friendId ? V8.G : { to: friendId, post: postId || null, song: null, message: '', anon: false, ai: [], aiLoading: false };
+  const G = V8.G;
+  openSheet(`<div style="padding:4px 20px 24px">
+    <div class="row" style="justify-content:center;gap:10px;margin-bottom:6px">${ava(f, 40)}<div class="disp" style="font-size:20px">${esc(f.name)}に曲を贈る</div></div>
+    ${p ? `<div class="faint" style="text-align:center;font-size:12.5px;margin-bottom:12px">今日の気分：${esc(p.mood)}${p.comment ? `「${esc(p.comment)}」` : ''}</div>` : '<div style="height:10px"></div>'}
+    ${G.song ? songMini(G.song, `<button class="icon-btn" style="width:30px;height:30px" data-act="gift-unpick">${I.x.replace('<svg', '<svg width="12" height="12"')}</button>`)
+      : `<div class="row" style="gap:8px"><button class="btn p" style="flex:1" data-act="gift-pick">🔎 曲を選ぶ</button><button class="btn g" style="flex:1" data-act="gift-ai" ${G.aiLoading ? 'disabled' : ''}>${G.aiLoading ? '<span class="spin"></span>' : '✨ AIに選んでもらう'}</button></div>
+         ${G.ai.length ? `<div style="margin-top:10px">${G.ai.map((s, i) => `<div class="ai-song tap" data-act="gift-ai-pick" data-i="${i}">${art(s, 46)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600;font-size:14px">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px">${esc(s.artist)}</div>${s.reason ? `<div style="font-size:12px;color:var(--cr2)">💬 ${esc(s.reason)}</div>` : ''}</div>${playBtn(s, 'dim')}</div>`).join('')}</div>` : ''}`}
+    <textarea class="inp" id="g-msg" rows="2" maxlength="60" placeholder="ひとこと添える（なくてもOK）" style="margin-top:12px">${esc(G.message)}</textarea>
+    <div class="toggle" data-act="gift-anon" style="padding:12px 2px"><div style="flex:1"><div style="font-size:14px;font-weight:600">🤫 名前を伏せて贈る</div><div class="faint" style="font-size:12px">「誰かが曲を贈ってくれた」とだけ届きます</div></div><div class="sw ${G.anon ? 'on' : ''}"></div></div>
+    <button class="btn p w" data-act="gift-send" ${G.song ? '' : 'disabled'}>🎁 贈る</button></div>`, { full: G.ai.length > 0 });
+  const m = $('#g-msg'); if (m) m.oninput = () => { G.message = m.value; };
+}
+async function giftsPage() {
+  try { V8.gifts = await api.gifts(); } catch (e) { toast(errText(e)); return; }
+  const rec = V8.gifts.filter(g => g.received), sent = V8.gifts.filter(g => !g.received);
+  remember2(V8.gifts.map(g => g.song));
+  const row = g => `<div class="card" style="margin:0 16px 10px;padding:12px">
+      <div class="row" style="gap:8px;margin-bottom:8px">${g.received ? (g.from ? ava(g.from, 28) : '<div class="ava" style="width:28px;height:28px;font-size:14px">🤫</div>') : ava(g.to, 28)}
+        <div style="flex:1;font-size:13px">${g.received ? `<b>${esc(g.from?.name || '誰か')}</b>から` : `<b>${esc(g.to?.name)}</b>へ`}${g.anonymous && !g.received ? '（匿名）' : ''}</div><div class="faint" style="font-size:11px">${rel(g.created_at)}</div></div>
+      ${songMini(g.song)}${g.message ? `<div style="font-size:13.5px;margin-top:8px">「${esc(g.message)}」</div>` : ''}
+      ${g.received && !g.opened_at ? `<button class="btn p sm" style="margin-top:8px" data-act="gift-open" data-id="${esc(g.id)}">💌 受け取る</button>` : ''}</div>`;
+  openSub(`${subHead('🎁 贈りもの')}<div class="page-body">
+    <div class="sec"><span class="lbl">届いた曲</span></div>${rec.length ? rec.map(row).join('') : `<div class="empty" style="padding:20px">まだ届いていません</div>`}
+    <div class="sec"><span class="lbl">贈った曲</span></div>${sent.length ? sent.map(row).join('') : `<div class="empty" style="padding:20px">フレンドの投稿の🎁から、曲を贈れます</div>`}</div>`);
+  rec.filter(g => !g.opened_at).forEach(() => {});
+}
+
+// ── ② 聴いてくれたよ（5秒以上再生したら） ──
+music.player.subscribe(st => {
+  const s = st.song; if (!st.playing || !s?.id || st.t < 5 || V8.listened.has(s.id)) return;
+  const p = S.posts.get(s.id); if (!p || p.mine) return;
+  V8.listened.add(s.id); api.markListened(s.id).catch(() => {});
+});
+
+// ── ③ 同じ気持ちの人 ──
+async function sameMoodSheet(mood) {
+  if (V8.carePending || V8.careOpen) return;   // 見守りの案内を優先
+  openSheet(`<div style="padding:10px 20px 30px;text-align:center"><div class="spin" style="margin:30px auto"></div></div>`);
+  let r; try { r = await api.sameMood(mood); } catch (e) { closeSheet(); toast(errText(e)); return; }
+  if (V8.carePending || V8.careOpen) return;
+  const [e, l] = splitMood(mood); remember2(r.songs || []);
+  openSheet(`<div style="padding:4px 20px 24px">
+    <div style="text-align:center;font-size:44px">${esc(e)}</div>
+    <div class="disp" style="font-size:22px;text-align:center;margin:6px 0">${r.count ? `今日、あなたと同じ「${esc(l || e)}」の人が<br><span style="color:var(--cr);font-size:30px">${r.count}人</span>います` : '今日いちばん乗りの気持ちです'}</div>
+    <div class="muted" style="font-size:13px;text-align:center;margin-bottom:16px">${r.count ? 'ひとりじゃないよ。みんなが選んだ曲を聴いてみる？' : 'あとから同じ気持ちの人が来るかも'}</div>
+    ${(r.songs || []).map(s => `<div style="margin-bottom:8px">${songMini(s)}</div>`).join('')}
+    ${r.songs?.length ? '<div class="faint" style="font-size:11.5px;text-align:center;margin-top:6px">誰が選んだかは表示されません</div>' : ''}</div>`, { full: (r.songs || []).length > 3 });
+}
+
+// ── ⑨ きもち天気図 ──
+function weatherHTML() {
+  if (!S.friends.length) return '';
+  const todays = new Map();
+  S.feed.filter(p => !p.mine && isToday(p.created_at)).forEach(p => { if (!todays.has(p.author?.id)) todays.set(p.author?.id, p); });
+  const cells = S.friends.map(f => {
+    const p = todays.get(f.id); const w = p ? WEATHER(p.mood) : '・';
+    return `<div class="wx" data-act="${p ? 'open-post' : 'friend-latest'}" data-id="${esc(p ? p.id : f.id)}"><div class="wx-ava">${ava(f, 46)}<span class="wx-ic">${w}</span></div><small class="ellip">${esc(f.name)}</small>${p && tone(p.mood) < 0 ? `<button class="wx-gift" data-act="gift" data-id="${esc(f.id)}" data-post="${esc(p.id)}" aria-label="曲を贈る">🎁</button>` : ''}</div>`;
+  }).join('');
+  const rainy = [...todays.values()].filter(p => tone(p.mood) < 0).length;
+  return `<div class="sec" style="padding-top:4px"><span class="lbl">きもち天気</span>${rainy ? `<span class="faint" style="font-size:11px">🌧️ ${rainy}人が雨模様。曲を贈ってみる？</span>` : ''}</div><div class="wx-row">${cells}</div>`;
+}
+
+// ── ⑬ 回復ログ ──
+function recoveryHTML() {
+  const today = S.mine.filter(p => isToday(p.created_at));
+  if (!today.length || tone(today[0].mood) < 1) return '';
+  const past = S.mine.filter(p => !isToday(p.created_at) && Date.now() - new Date(p.created_at) < 7 * 864e5 && tone(p.mood) < 0);
+  if (!past.length) return '';
+  const days = Math.max(1, Math.round((Date.now() - new Date(past[0].created_at)) / 864e5));
+  return `<div class="card" style="margin:0 16px 12px;padding:14px;border-color:rgba(255,176,48,.3);background:linear-gradient(135deg,rgba(255,176,48,.08),transparent)">
+    <div style="font-weight:700;font-size:14.5px">🌤️ ${days}日前より、少し晴れたね</div>
+    <div class="muted" style="font-size:12px;margin:3px 0 10px">あのとき支えになった曲</div>
+    ${past.slice(0, 2).map(p => `<div style="margin-bottom:6px">${songMini(p)}</div>`).join('')}</div>`;
+}
+
+// ── ⑥ 夜だけのひとりごと ──
+function nightCardHTML() {
+  if (!isNight()) return '';
+  return `<div class="cta tap" data-act="night" style="background:linear-gradient(135deg,rgba(167,139,250,.14),rgba(7,7,8,0));border-color:rgba(167,139,250,.3)"><div class="ic" style="background:rgba(167,139,250,.18);font-size:20px">🌙</div><div style="flex:1"><div style="font-weight:600;font-size:15px">夜のひとりごと</div><div class="muted" style="font-size:12px;margin-top:2px">22時〜朝6時だけ。名前は出ず、朝には消えます</div></div><div class="faint">›</div></div>`;
+}
+async function nightPage() {
+  if (!isNight()) { toast('ひとりごとは夜22時〜朝6時だけ開いています'); return; }
+  try { V8.night = await api.nightFeed(); } catch (e) { toast(errText(e)); return; }
+  remember2(V8.night.map(w => w.song).filter(Boolean));
+  const W = V8.W ||= { text: '', mood: '', song: null };
+  openSub(`${subHead('🌙 夜のひとりごと')}<div class="page-body" style="background:linear-gradient(#0c0b16,var(--bg) 40%)">
+    <div class="card" style="margin:12px 16px;padding:14px">
+      <textarea class="inp" id="w-text" rows="2" maxlength="80" placeholder="眠れない夜の、ひとりごと">${esc(W.text)}</textarea>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin:10px 0">${MOODS.map(([e, l]) => `<button class="chip ${W.mood === e + ' ' + l ? 'on-chip' : ''}" data-act="w-mood" data-m="${e} ${l}">${e}</button>`).join('')}</div>
+      ${W.song ? songMini(W.song, `<button class="icon-btn" style="width:30px;height:30px" data-act="w-unsong">${I.x.replace('<svg', '<svg width="12" height="12"')}</button>`) : `<button class="btn g sm" data-act="w-song">🎵 曲もそえる</button>`}
+      <button class="btn p w" style="margin-top:10px" data-act="w-post">つぶやく</button>
+      <div class="faint" style="font-size:11px;margin-top:8px;line-height:1.6">名前やアイコンは出ません。朝6時に全部消えます。悪口や個人情報はNG</div></div>
+    ${V8.night.length ? V8.night.map(w => `<div class="card" style="margin:0 16px 10px;padding:14px">
+      <div class="row" style="gap:8px;margin-bottom:6px"><span style="font-size:18px">${esc(w.emoji)}</span><span class="faint" style="font-size:11.5px;flex:1">${w.mine ? 'あなた' : 'どこかの誰か'} · ${rel(w.created_at)}</span>${w.mood ? `<span class="chip">${esc(splitMood(w.mood)[0])}</span>` : ''}</div>
+      <div style="font-size:15px;line-height:1.7;white-space:pre-wrap">${esc(w.text)}</div>
+      ${w.song ? `<div style="margin-top:8px">${songMini(w.song)}</div>` : ''}
+      <div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px">${w.mine ? `<span class="faint" style="font-size:12px">🫂 ${w.hugs || 0}人がそっと寄り添った</span>` : `<button class="rx ${w.hugged ? 'on' : ''}" data-act="w-hug" data-id="${esc(w.id)}">🫂 ${w.hugged ? 'よりそった' : 'よりそう'}</button><button class="faint" style="font-size:11px;padding:6px" data-act="w-report" data-id="${esc(w.id)}">通報</button>`}</div></div>`).join('')
+      : `<div class="empty">まだ静かな夜です</div>`}</div>`, pg => { const t = pg.querySelector('#w-text'); if (t) t.oninput = () => { W.text = t.value; }; });
+}
+
+// ── ⑦ 曲リレー ──
+function relayCardsHTML() {
+  const act = V8.relays.filter(r => new Date(r.ends_at) > new Date());
+  if (!S.friends.length && !act.length) return '';
+  return `<div class="sec"><span class="lbl">🔗 曲リレー</span><button class="faint" style="font-size:12px" data-act="relay-new">＋ はじめる</button></div>
+    <div class="hero-chart" style="padding-bottom:14px">${act.map(r => `<div class="relay-card tap" data-act="relay" data-id="${esc(r.id)}"><div class="faint" style="font-size:11px">${esc(r.creator?.name)}のテーマ</div><div style="font-weight:700;font-size:15px;margin:2px 0 8px" class="ellip">${esc(r.theme)}</div><div class="row" style="gap:-6px">${r.songs.slice(-4).map(s => art(s.song, 34)).join('')}</div><div class="faint" style="font-size:11px;margin-top:6px">${r.songs.length}曲 · のこり${Math.max(0, Math.ceil((new Date(r.ends_at) - Date.now()) / 864e5))}日</div></div>`).join('') ||
+      `<div class="relay-card tap" data-act="relay-new"><div style="font-weight:700;font-size:14px">テーマを決めて<br>フレンドと1曲ずつつなごう</div><div class="faint" style="font-size:11px;margin-top:6px">例：雨の日に聴きたい曲</div></div>`}</div>`;
+}
+function relayPage(id) {
+  const r = V8.relays.find(x => x.id === id); if (!r) { loadRelays().then(() => V8.relays.find(x => x.id === id) && relayPage(id)); return; }
+  remember2(r.songs.map(s => s.song));
+  const last = r.songs[r.songs.length - 1]; const ended = new Date(r.ends_at) < new Date();
+  openSub(`${subHead('🔗 ' + esc(r.theme))}<div class="page-body">
+    <div class="faint" style="font-size:12px;padding:12px 18px">${esc(r.creator?.name)}がはじめたリレー · ${r.songs.length}曲 · ${ended ? '終了' : `のこり${Math.ceil((new Date(r.ends_at) - Date.now()) / 864e5)}日`}</div>
+    ${r.songs.map((s, i) => `<div class="relay-step"><div class="relay-n">${i + 1}</div><div style="flex:1;min-width:0"><div class="faint" style="font-size:11.5px;margin-bottom:4px">${esc(s.by?.name)}${s.note ? ` 「${esc(s.note)}」` : ''}</div>${songMini(s.song)}</div></div>`).join('')}
+    ${ended ? '' : last?.mine ? `<div class="empty" style="padding:20px">次は誰かがつないでくれるのを待とう</div>` : `<div style="padding:10px 18px 30px"><button class="btn p w" data-act="relay-add" data-id="${esc(r.id)}">＋ 次の1曲をつなぐ</button></div>`}</div>`);
+}
+async function loadRelays() { try { V8.relays = await api.relays(); } catch { V8.relays = []; } }
+
+// ── ⑩ 未来の自分へ ──
+async function lettersPage() {
+  try { V8.letters = await api.letters(); } catch (e) { toast(errText(e)); return; }
+  remember2(V8.letters.map(l => l.song).filter(Boolean));
+  const L = V8.L ||= { song: null, text: '', days: 30 };
+  openSub(`${subHead('💌 未来の自分へ')}<div class="page-body">
+    <div class="card" style="margin:12px 16px;padding:14px">
+      <div style="font-weight:700;font-size:14.5px;margin-bottom:4px">今の気持ちを、未来の自分に届けよう</div>
+      <div class="faint" style="font-size:12px;margin-bottom:10px">届く日まで、自分でも中身は見られません</div>
+      ${L.song ? songMini(L.song, `<button class="icon-btn" style="width:30px;height:30px" data-act="l-unsong">${I.x.replace('<svg', '<svg width="12" height="12"')}</button>`) : `<button class="btn g w" data-act="l-song">🎵 届ける曲を選ぶ</button>`}
+      <textarea class="inp" id="l-text" rows="3" maxlength="140" placeholder="未来の自分へのひとこと" style="margin-top:10px">${esc(L.text)}</textarea>
+      <div class="seg" style="margin-top:10px">${[[7, '1週間後'], [30, '1ヶ月後'], [100, '100日後'], [365, '1年後']].map(([d, t]) => `<button class="${L.days === d ? 'on' : ''}" data-act="l-days" data-d="${d}">${t}</button>`).join('')}</div>
+      <button class="btn p w" style="margin-top:12px" data-act="l-send" ${L.song ? '' : 'disabled'}>封をして送る</button></div>
+    <div class="sec"><span class="lbl">手紙</span></div>
+    ${V8.letters.length ? V8.letters.map(l => l.delivered_at ? `<div class="card" style="margin:0 16px 10px;padding:12px"><div class="faint" style="font-size:11.5px;margin-bottom:6px">💌 ${new Date(l.created_at).toLocaleDateString('ja-JP')}のあなたより${l.mood ? ' · ' + esc(l.mood) : ''}</div>${songMini(l.song)}${l.text ? `<div style="font-size:14px;margin-top:8px;line-height:1.7">「${esc(l.text)}」</div>` : ''}</div>`
+      : `<div class="card row" style="margin:0 16px 10px;padding:14px"><span style="font-size:24px">✉️</span><div style="flex:1"><div style="font-size:14px;font-weight:600">封をした手紙</div><div class="faint" style="font-size:12px">${new Date(l.deliver_at).toLocaleDateString('ja-JP')} に届きます</div></div></div>`).join('')
+      : `<div class="empty" style="padding:20px">まだ手紙はありません</div>`}</div>`, pg => { const t = pg.querySelector('#l-text'); if (t) t.oninput = () => { L.text = t.value; }; });
+}
+
+// ── ⑪ 2人だけの交換ノート ──
+async function notePage(friendId) {
+  const f = S.friends.find(x => x.id === friendId); if (!f) { toast('フレンドとだけ交換ノートができます'); return; }
+  let n; try { n = await api.openNote(friendId); } catch (e) { toast(errText(e)); return; }
+  remember2(n.entries.map(e => e.song));
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const mineToday = n.entries.find(e => e.mine && e.day === todayKey);
+  const days = [...new Set(n.entries.map(e => e.day))];
+  const N = V8.N = { friend: friendId, song: null, text: '' };
+  openSub(`${subHead('📓 ' + esc(f.name) + 'との交換ノート')}<div class="page-body">
+    <div class="row" style="justify-content:center;gap:14px;padding:16px 0 6px">${ava(S.profile, 44)}<span style="font-size:20px">📓</span>${ava(f, 44)}</div>
+    <div class="faint" style="text-align:center;font-size:12px;margin-bottom:12px">${days.length}日分の曲を交換しました</div>
+    ${mineToday ? '' : `<div class="card" style="margin:0 16px 14px;padding:14px"><div style="font-weight:700;font-size:14px;margin-bottom:8px">今日の1曲を書く</div><div id="n-song"><button class="btn g w" data-act="n-song">🎵 曲を選ぶ</button></div><textarea class="inp" id="n-text" rows="2" maxlength="60" placeholder="ひとこと" style="margin-top:8px"></textarea><button class="btn p w" style="margin-top:8px" data-act="n-send" disabled>ノートに書く</button></div>`}
+    ${days.map(d => `<div class="day" style="display:table;margin:12px auto 8px">${dayLabel(d + 'T12:00:00')}</div>${n.entries.filter(e => e.day === d).map(e => `<div style="margin:0 16px 8px;${e.mine ? 'margin-left:48px' : 'margin-right:48px'}">${songMini(e.song)}${e.text ? `<div style="font-size:13px;margin-top:4px;${e.mine ? 'text-align:right' : ''}">${esc(e.text)}</div>` : ''}</div>`).join('')}`).join('') || `<div class="empty" style="padding:20px">1日1曲ずつ、2人だけのノートを作ろう</div>`}</div>`,
+    pg => { const t = pg.querySelector('#n-text'); if (t) t.oninput = () => { N.text = t.value; }; });
+}
+async function notesPage() {
+  try { V8.notes = await api.notes(); } catch (e) { toast(errText(e)); return; }
+  openSub(`${subHead('📓 交換ノート')}<div class="page-body">
+    ${V8.notes.map(n => `<div class="th" data-act="note" data-id="${esc(n.friend?.id)}">${ava(n.friend, 46)}<div class="info"><div class="nm">${esc(n.friend?.name)}</div><div class="pv">${n.days}日 · ${n.today_me ? '今日は書いた✓' : '今日まだ書いてない'}${n.today_them ? ' · 相手は書いた' : ''}</div></div></div>`).join('')}
+    <div class="sec"><span class="lbl">フレンドと始める</span></div>
+    ${S.friends.filter(f => !V8.notes.some(n => n.friend?.id === f.id)).map(f => `<div class="th" data-act="note" data-id="${esc(f.id)}">${ava(f, 40)}<div class="info"><div class="nm">${esc(f.name)}</div></div><span class="faint">＋</span></div>`).join('') || '<div class="faint" style="padding:0 18px;font-size:13px">フレンドを招待すると始められます</div>'}</div>`);
+}
+
+// ── ⑭ 2人のプレイリスト ──
+async function pairPage(friendId) {
+  const f = S.friends.find(x => x.id === friendId); if (!f) return;
+  let r; try { r = await api.pairPlaylist(friendId); } catch (e) { toast(errText(e)); return; }
+  if (!r) return;
+  remember2(r.songs || []);
+  const days = Math.max(1, Math.round((Date.now() - new Date(r.since)) / 864e5));
+  openSub(`${subHead('🎂 ' + esc(f.name) + 'との' + days + '日')}<div class="page-body">
+    <div class="row" style="justify-content:center;gap:14px;padding:18px 0 6px">${ava(S.profile, 48)}<span style="font-size:22px">🤝</span>${ava(f, 48)}</div>
+    <div class="disp" style="text-align:center;font-size:20px">2人のプレイリスト</div>
+    <div class="faint" style="text-align:center;font-size:12px;margin:4px 0 14px">つながってから${days}日 · ${(r.songs || []).length}曲</div>
+    ${(r.songs || []).map(s => `<div style="margin:0 16px 8px">${songMini(s, `<span class="faint" style="font-size:10.5px;white-space:nowrap">${s.mine ? 'あなた' : esc(f.name)}${s.from === 'gift' ? '🎁' : ''}</span>`)}</div>`).join('') || '<div class="empty">まだ曲がありません</div>'}</div>`);
+}
+
+// ── ④ 月末のきもちの記録 ＋ ⑫ ストーリー用カード ──
+function monthPosts(offset = 0) {
+  const d = new Date(); d.setMonth(d.getMonth() + offset, 1);
+  return { y: d.getFullYear(), m: d.getMonth() + 1, list: S.mine.filter(p => { const x = new Date(p.created_at); return x.getFullYear() === d.getFullYear() && x.getMonth() === d.getMonth(); }) };
+}
+async function recapPage(offset = 0) {
+  const { y, m, list } = monthPosts(offset);
+  V8.R = { offset, y, m, list, ai: V8.R?.offset === offset ? V8.R.ai : null, loading: false };
+  const counts = {}; list.forEach(p => { const e = splitMood(p.mood)[0]; counts[e] = (counts[e] || 0) + 1; });
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const artists = {}; list.forEach(p => { artists[p.artist] = (artists[p.artist] || 0) + 1; });
+  const topA = Object.entries(artists).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  remember2(list);
+  const R = V8.R;
+  openSub(`${subHead(`🗓 ${m}月のきもち`, `<button class="faint" style="font-size:12px;padding:6px" data-act="recap-prev">‹ 先月</button>${offset < 0 ? `<button class="faint" style="font-size:12px;padding:6px" data-act="recap-next">次月 ›</button>` : ''}`)}<div class="page-body">
+    ${list.length ? `
+    <div class="card" style="margin:14px 16px;padding:18px;text-align:center;background:linear-gradient(160deg,rgba(167,139,250,.14),rgba(62,207,197,.06))">
+      <div class="faint" style="font-size:12px">${y}年${m}月</div>
+      <div class="disp" style="font-size:26px;margin:4px 0 2px">${R.ai ? esc(R.ai.title) : `${list.length}曲の${m}月`}</div>
+      <div style="font-size:34px;letter-spacing:4px;margin:8px 0">${top.slice(0, 5).map(([e]) => e).join('')}</div>
+      ${R.ai ? `<div style="font-size:14px;line-height:1.8;text-align:left;margin-top:8px">${esc(R.ai.summary)}</div><div style="font-size:13px;color:var(--cr2);margin-top:10px">💬 ${esc(R.ai.word)}</div>`
+        : `<button class="btn g sm" style="margin-top:6px" data-act="recap-ai" id="recap-ai">✨ AIにふり返ってもらう</button>`}
+    </div>
+    <div class="card box"><h3>気分の流れ</h3><div class="mood-line">${list.slice().reverse().map(p => `<span title="${esc(p.mood)}" style="background:${MOOD_COLOR[splitMood(p.mood)[0]] || '#e9e4d8'}"></span>`).join('')}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">${top.map(([e, n]) => `<span class="chip">${e} ${n}回</span>`).join('')}</div></div>
+    ${topA.length ? `<div class="card box"><h3>よく選んだアーティスト</h3>${topA.map(([a, n], i) => `<div class="li"><b style="width:18px">${i + 1}</b><div style="flex:1" class="ellip">${esc(a)}</div><span class="faint" style="font-size:12px">${n}曲</span></div>`).join('')}</div>` : ''}
+    <div class="sec"><span class="lbl">${m}月のプレイリスト</span></div>
+    ${list.map(p => `<div style="margin:0 16px 8px">${songMini(p)}</div>`).join('')}
+    <div style="padding:10px 16px 30px"><button class="btn p w" data-act="recap-card">📸 ストーリー用の画像をつくる</button></div>`
+      : `<div class="empty"><span class="e-ic">🗓</span>${m}月はまだシェアがありません</div>`}</div>`);
+}
+// ストーリー用 1080x1920 画像
+function loadImg(src) {
+  return new Promise(res => {
+    if (!src) return res(null);
+    const i = new Image(); i.crossOrigin = 'anonymous';
+    i.onload = () => res(i); i.onerror = () => res(null);
+    i.src = ART_RE.test(src) ? `/api/art?u=${encodeURIComponent(src)}` : src;
+  });
+}
+function wrapText(ctx, text, x, y, maxW, lh, maxLines = 3) {
+  let line = '', lines = [];
+  for (const ch of String(text)) { const t = line + ch; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = ch; } else line = t; }
+  if (line) lines.push(line);
+  lines = lines.slice(0, maxLines); lines.forEach((l, i) => ctx.fillText(l, x, y + i * lh)); return lines.length * lh;
+}
+async function storyCard({ kind, post, recap }) {
+  toast('画像をつくっています…');
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, 1080, 1920); grd.addColorStop(0, '#1b1d29'); grd.addColorStop(.55, '#0b0b0f'); grd.addColorStop(1, '#070708');
+  g.fillStyle = grd; g.fillRect(0, 0, 1080, 1920);
+  const logo = await loadImg('/logo-mark.png');
+  const F = '"Hiragino Sans","Noto Sans JP","DM Sans",sans-serif';
+  g.textAlign = 'center'; g.fillStyle = '#e9e4d8';
+  if (kind === 'post') {
+    const im = await loadImg(post.artwork);
+    g.save(); g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 60;
+    const s = 760, x = 160, y = 330; g.beginPath(); g.roundRect(x, y, s, s, 48); g.clip();
+    if (im) g.drawImage(im, x, y, s, s); else { g.fillStyle = '#1e1f23'; g.fillRect(x, y, s, s); }
+    g.restore();
+    g.fillStyle = '#e9e4d8'; g.font = `800 64px ${F}`; wrapText(g, post.title, 540, 1210, 900, 76, 2);
+    g.fillStyle = '#8a8d95'; g.font = `500 40px ${F}`; g.fillText(post.artist, 540, 1370);
+    g.font = `80px ${F}`; g.fillText(splitMood(post.mood)[0], 540, 1500);
+    if (post.comment) { g.fillStyle = '#c3bdaf'; g.font = `500 42px ${F}`; wrapText(g, `「${post.comment}」`, 540, 1600, 860, 58, 2); }
+    g.fillStyle = '#8a8d95'; g.font = `600 36px ${F}`; g.fillText('今日の1曲', 540, 250);
+  } else {
+    g.fillStyle = '#8a8d95'; g.font = `600 40px ${F}`; g.fillText(`${recap.y}年${recap.m}月のきもち`, 540, 260);
+    g.fillStyle = '#e9e4d8'; g.font = `800 76px ${F}`; wrapText(g, recap.title, 540, 380, 940, 90, 2);
+    g.font = `110px ${F}`; g.fillText(recap.emojis, 540, 600);
+    const arts = await Promise.all(recap.list.slice(0, 9).map(p => loadImg(p.artwork)));
+    arts.forEach((im, i) => { const s = 280, gap = 20, x = 120 + (i % 3) * (s + gap), y = 700 + Math.floor(i / 3) * (s + gap); g.save(); g.beginPath(); g.roundRect(x, y, s, s, 24); g.clip(); if (im) g.drawImage(im, x, y, s, s); else { g.fillStyle = '#1e1f23'; g.fillRect(x, y, s, s); } g.restore(); });
+    g.fillStyle = '#c3bdaf'; g.font = `500 40px ${F}`; wrapText(g, recap.summary || `${recap.list.length}曲をシェアしました`, 540, 1640, 900, 56, 3);
+  }
+  if (logo) g.drawImage(logo, 470, 1760, 56, 60);
+  g.fillStyle = '#e9e4d8'; g.font = `800 44px ${F}`; g.textAlign = 'left'; g.fillText('hearme', 540, 1806);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  if (!blob) { toast('画像を作れませんでした'); return; }
+  const file = new File([blob], 'hearme.png', { type: 'image/png' });
+  if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: 'hearme' }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'hearme.png'; a.click();
+  toast('画像を保存しました');
+}
+
+// ── ⑧ 気分のグラデーション ──
+function padHTML() {
+  const x = C.mx ?? null, y = C.my ?? null;
+  return `<div class="pad" id="mood-pad"><span class="pad-l t">あかるい</span><span class="pad-l b">さみしい</span><span class="pad-l l">しずか</span><span class="pad-l r">元気</span>${x != null ? `<i class="pad-dot" style="left:${(x + 100) / 2}%;top:${(100 - y) / 2}%"></i>` : '<span class="pad-hint">指でなぞって、今の気分を</span>'}</div>`;
+}
+function padMood(x, y) {
+  if (y > 40 && x > 40) return '🤩 アガる'; if (y > 40 && x < -20) return '😌 穏やか'; if (y > 30) return '😊 嬉しい';
+  if (y < -40 && x < -20) return '🥺 寂しい'; if (y < -40) return '😢 悲しい'; if (x > 50) return '🔥 熱い';
+  if (x < -50) return '😴 眠い'; if (y < -10 && x > 20) return '😤 モヤモヤ'; return '💭 考え中';
+}
+function bindPad() {
+  const el = $('#mood-pad'); if (!el || el._bound) return; el._bound = true;
+  const set = e => {
+    const r = el.getBoundingClientRect();
+    C.mx = Math.round(Math.max(-100, Math.min(100, ((e.clientX - r.left) / r.width) * 200 - 100)));
+    C.my = Math.round(Math.max(-100, Math.min(100, 100 - ((e.clientY - r.top) / r.height) * 200)));
+    let dot = el.querySelector('.pad-dot'); el.querySelector('.pad-hint')?.remove();
+    if (!dot) { dot = document.createElement('i'); dot.className = 'pad-dot'; el.appendChild(dot); }
+    dot.style.left = `${(C.mx + 100) / 2}%`; dot.style.top = `${(100 - C.my) / 2}%`;
+    const m = padMood(C.mx, C.my);
+    if (m !== C.mood) { C.mood = m; buzz(4); $$('.md').forEach(b => b.classList.toggle('on', b.dataset.m === C.mood)); }
+    const go = $('#cmp-go'); if (go) go.disabled = !(C.song && C.mood);
+  };
+  let down = false;
+  el.addEventListener('pointerdown', e => { down = true; try { el.setPointerCapture(e.pointerId); } catch { /* */ } set(e); });
+  el.addEventListener('pointermove', e => { if (down) set(e); });
+  const up = () => { down = false; };
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+}
+
+// ── 読み込み ──
+async function loadV8() { await Promise.all([loadNotifs(), loadRelays()]); if (S.tab === 'home') renderHome(); }
+
+// ── アクション ──
+Object.assign(A, {
+  inbox: () => openInbox(),
+  'notif-go': el => routeURL(el.dataset.url),
+  'care-ok': () => closeSheet(),
+  gift: (el, e) => { e?.stopPropagation(); V8.G = null; giftSheet(el.dataset.id, el.dataset.post); },
+  'gift-pick': () => openSongPicker(s => { V8.G.song = songOf(s); giftSheet(V8.G.to, V8.G.post); }),
+  'gift-unpick': () => { V8.G.song = null; giftSheet(V8.G.to, V8.G.post); },
+  'gift-ai': async () => {
+    const G = V8.G; const p = G.post ? S.posts.get(G.post) : null; const f = S.friends.find(x => x.id === G.to);
+    G.aiLoading = true; giftSheet(G.to, G.post);
+    try { const r = await api.recommend(`友達（${f?.name || ''}）の今日の気分は「${p?.mood || '少し元気がない'}」${p?.comment ? '、ひとこと「' + p.comment + '」' : ''}。寄り添って元気づける曲を贈りたい`); G.ai = remember2(r.songs || []); }
+    catch (e) { toast(errText(e)); }
+    G.aiLoading = false; giftSheet(G.to, G.post);
+  },
+  'gift-ai-pick': el => { V8.G.song = songOf(V8.G.ai[+el.dataset.i]); V8.G.ai = []; giftSheet(V8.G.to, V8.G.post); },
+  'gift-anon': el => { V8.G.anon = !V8.G.anon; el.querySelector('.sw').classList.toggle('on', V8.G.anon); buzz(5); },
+  'gift-send': async el => {
+    const G = V8.G; if (!G?.song) return; el.disabled = true;
+    try { await api.sendGift(G.to, G.song, G.message.trim(), G.anon, G.post); buzz([10, 40, 10]); closeSheet(); toast(G.anon ? '🎁 名前を伏せて贈りました' : '🎁 曲を贈りました'); V8.G = null; }
+    catch (e) { toast(errText(e)); el.disabled = false; }
+  },
+  gifts: () => giftsPage(),
+  'gift-open': async el => { await api.openGift(el.dataset.id).catch(() => {}); buzz(10); toast('💌 受け取りました'); giftsPage(); },
+  'same-mood': el => sameMoodSheet(el.dataset.m),
+  night: () => nightPage(),
+  'w-mood': el => { V8.W.mood = V8.W.mood === el.dataset.m ? '' : el.dataset.m; $$('[data-act="w-mood"]').forEach(b => b.classList.toggle('on-chip', b.dataset.m === V8.W.mood)); },
+  'w-song': () => openSongPicker(s => { V8.W.song = songOf(s); nightPage(); }),
+  'w-unsong': () => { V8.W.song = null; nightPage(); },
+  'w-post': async el => {
+    const W = V8.W; const t = (W.text || '').trim(); if (!t) { toast('ひとことを書いてね'); return; }
+    el.disabled = true;
+    try { await api.postWhisper(t, W.mood, W.song); V8.W = { text: '', mood: '', song: null }; toast('🌙 つぶやきました'); nightPage(); loadNotifs(); }
+    catch (e) { toast(errText(e)); el.disabled = false; }
+  },
+  'w-hug': async el => { await api.hugWhisper(el.dataset.id).catch(() => {}); el.classList.add('on', 'pop'); el.textContent = '🫂 よりそった'; buzz(8); },
+  'w-report': async el => { if (!await confirmSheet({ title: 'このひとりごとを通報？', ok: '通報', danger: true })) return; await api.reportWhisper(el.dataset.id, 'whisper').catch(() => {}); toast('通報しました'); },
+  relay: el => relayPage(el.dataset.id),
+  'relay-new': () => {
+    openSheet(`<div style="padding:4px 20px 24px"><div class="disp" style="font-size:20px;text-align:center;margin-bottom:6px">曲リレーをはじめる</div><div class="faint" style="font-size:12.5px;text-align:center;margin-bottom:14px">テーマに合う曲を、フレンドと1曲ずつつないでいこう（7日間）</div>
+      <input class="inp" id="rl-theme" maxlength="30" placeholder="テーマ（例：雨の日に聴きたい曲）"><div class="row" style="gap:6px;flex-wrap:wrap;margin:10px 0">${['雨の日に聴きたい曲', '夜に聴きたい曲', '元気が出る曲', '泣ける曲', '青春っぽい曲'].map(t => `<button class="chip" data-act="rl-preset" data-t="${t}">${t}</button>`).join('')}</div>
+      <button class="btn p w" data-act="rl-next">最初の1曲を選ぶ →</button></div>`);
+  },
+  'rl-preset': el => { $('#rl-theme').value = el.dataset.t; },
+  'rl-next': () => {
+    const theme = ($('#rl-theme')?.value || '').trim(); if (!theme) { toast('テーマを決めてね'); return; }
+    openSongPicker(async s => { try { const r = await api.startRelay(theme, songOf(s), ''); toast('🔗 リレーをはじめました'); await loadRelays(); relayPage(r.id); render(); } catch (e) { toast(errText(e)); } });
+  },
+  'relay-add': el => openSongPicker(async s => { try { await api.addRelaySong(el.dataset.id, songOf(s), ''); toast('🔗 つなぎました'); await loadRelays(); relayPage(el.dataset.id); } catch (e) { toast(errText(e)); } }),
+  letters: () => lettersPage(),
+  'l-song': () => openSongPicker(s => { V8.L.song = songOf(s); lettersPage(); }),
+  'l-unsong': () => { V8.L.song = null; lettersPage(); },
+  'l-days': el => { V8.L.days = +el.dataset.d; $$('[data-act="l-days"]').forEach(b => b.classList.toggle('on', b === el)); },
+  'l-send': async el => {
+    const L = V8.L; if (!L.song) return; el.disabled = true;
+    try { const r = await api.writeLetter(L.song, L.text.trim(), postedToday()[0]?.mood || '', L.days); V8.L = { song: null, text: '', days: 30 }; toast(`💌 ${new Date(r.deliver_at).toLocaleDateString('ja-JP')}に届きます`); lettersPage(); }
+    catch (e) { toast(errText(e)); el.disabled = false; }
+  },
+  notes: () => notesPage(),
+  note: el => { closeSheet(); notePage(el.dataset.id); },
+  'n-song': () => openSongPicker(s => { V8.N.song = songOf(s); const box = $('#n-song'); if (box) box.innerHTML = songMini(V8.N.song); const b = $('[data-act="n-send"]'); if (b) b.disabled = false; }),
+  'n-send': async el => {
+    const N = V8.N; if (!N?.song) return; el.disabled = true;
+    try { await api.addNoteEntry(N.friend, N.song, (N.text || '').trim()); toast('📓 書きました'); notePage(N.friend); } catch (e) { toast(errText(e)); el.disabled = false; }
+  },
+  pair: el => { closeSheet(); pairPage(el.dataset.id); },
+  recap: () => recapPage(0),
+  'recap-prev': () => recapPage((V8.R?.offset || 0) - 1),
+  'recap-next': () => recapPage(Math.min(0, (V8.R?.offset || 0) + 1)),
+  'recap-ai': async el => {
+    const R = V8.R; el.disabled = true; el.innerHTML = '<span class="spin"></span> ふり返っています…';
+    try { R.ai = await api.recap(R.list.slice().reverse().map(p => ({ day: p.created_at, mood: p.mood, title: p.title, artist: p.artist }))); recapPage(R.offset); }
+    catch (e) { toast(errText(e)); el.disabled = false; el.textContent = '✨ AIにふり返ってもらう'; }
+  },
+  'recap-card': () => { const R = V8.R; const counts = {}; R.list.forEach(p => { const e = splitMood(p.mood)[0]; counts[e] = (counts[e] || 0) + 1; }); storyCard({ kind: 'recap', recap: { y: R.y, m: R.m, list: R.list, title: R.ai?.title || `${R.list.length}曲の${R.m}月`, summary: R.ai?.summary, emojis: Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([e]) => e).join('') } }); },
+  'story-post': el => { const p = S.posts.get(el.dataset.id); if (p) storyCard({ kind: 'post', post: p }); },
+});
+
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el) {
     const f = e.target.closest('.msg.failed'); if (f) retryFailed(f.dataset.mid);
@@ -1021,6 +1479,12 @@ function wireRealtime() {
   });
   let pT; api.on('post', () => { clearTimeout(pT); pT = setTimeout(loadFeeds, 600); });
   api.on('moment', m => { S.moment = { at: m.at }; showMoment(); render(); });
+  api.on('notification', n => {
+    V8.notifs.unshift(n); bell();
+    if (n.kind === 'care') { V8.careShown = false; checkCare(); return; }
+    if (document.visibilityState === 'visible') toast(n.title); buzz(8);
+    if (n.kind === 'relay') loadRelays().then(() => S.tab === 'home' && renderHome());
+  });
 }
 
 // ═══════════════════════ ONBOARDING / AUTH ═══════════════════════
@@ -1147,6 +1611,7 @@ async function startApp() {
   S.seenActivity = +(localStorage.getItem('hm_seen_act') || S.activity.length);
   badges();
   await loadMoment();
+  loadV8();
   // 招待リンク（すでに登録済みの人）
   const inv = pendingInvite(); if (inv) { sessionStorage.removeItem('hm_inv'); await addByCode(inv); }
   handleDeepLink(new URLSearchParams(location.search));
@@ -1161,6 +1626,14 @@ function handleDeepLink(q) {
   if (q.get('dm')) openChat(q.get('dm'));
   else if (q.get('moment')) { if (momentActive()) openComposer(); }
   else if (q.get('compose')) openComposer();
+  else if (q.get('gift')) giftsPage();
+  else if (q.get('post')) { const p = S.posts.get(q.get('post')); if (p) openPost(p.id); }
+  else if (q.get('relay')) relayPage(q.get('relay'));
+  else if (q.get('letter')) lettersPage();
+  else if (q.get('note')) notePage(q.get('note'));
+  else if (q.get('pair')) pairPage(q.get('pair'));
+  else if (q.get('care')) careSheet();
+  else if (q.get('night')) nightPage();
   else if (q.get('tab') && ['home', 'explore', 'dm', 'me'].includes(q.get('tab'))) setTab(q.get('tab'));
 }
 window.addEventListener('beforeunload', () => localStorage.setItem('hm_seen_act', S.seenActivity));
