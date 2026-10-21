@@ -7,7 +7,7 @@ import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 import * as CFG from './config.js';
 const AI_ON = CFG.AI_ENABLED !== false && CFG.AI_ENABLED !== undefined ? true : false;
 
-const VERSION = '10.4.1';
+const VERSION = '10.5.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -319,6 +319,12 @@ function friendRow(f, p) {
     <span class="fr-tx"><b class="ellip">${esc(f.name)}</b><small class="ellip">${esc(p.title)}<i>·</i>${esc(p.artist)}</small></span>
     <span class="fr-r">${heard ? `<span class="fr-heard">${I.check} 聴いた</span>` : `<span class="fr-new">${I.headphones} きく</span>`}</span></button>`;
 }
+// 見本の虹：自分の色＋ほかの3色（重ならないように選ぶ）
+function sampleRainbow(mine) {
+  const me = mine ? moodOf(mine.mood).e : '😌';
+  const others = ['😊', '😢', '🥰', '🔥', '😴'].filter(e => e !== me).slice(0, 3);
+  return { total: 4, moods: [me, ...others].map(e => ({ e, n: 1 })) };
+}
 function myTodayCard(p) {
   const mo = moodOf(p.mood);
   return `<button class="mytoday" style="--mc:${mo.c}" data-act="open-post" data-id="${p.id}">${art(p, 52)}
@@ -336,8 +342,8 @@ function renderHome() {
   let list;
   if (!S.loaded.feed) list = `<div class="fr-sk">${'<div class="sk" style="height:62px;border-radius:18px"></div>'.repeat(3)}</div>`;
   else if (!S.friends.length) list = `<div class="invite ${mine ? 'sm' : ''}">
-      <div class="inv-sample">${miniRainbow({ total: 4, moods: [{ e: mine ? moodOf(mine.mood).e : '😌', n: 1 }, ...[{ e: '😊', n: 1 }, { e: '😢', n: 1 }, { e: '🥰', n: 1 }].filter(x => !mine || x.e !== moodOf(mine.mood).e)].slice(0, 4) }, 120)}<span>見本</span></div>
-      <b>友達が4人いると、こんな虹に</b><p>仲のいい人を招待すると、その人の色が重なって、毎日ちがう虹ができていきます。</p>
+      <div class="inv-sample">${miniRainbow(sampleRainbow(mine), 120)}<span>見本</span></div>
+      <b>4人で色をたすと、こんな虹に</b><p>仲のいい人を招待すると、その人の色が重なって、毎日ちがう虹ができていきます。</p>
       <div class="inv-btns"><button class="btn p" data-act="share-invite">${I.share} 招待リンクを送る</button><button class="btn g" data-act="add-friend">コードで追加</button></div></div>`;
   else list = `
     ${posted.length ? `<div class="sec2"><span>今日とどいた曲</span>${unheard ? `<button class="sec2-go" data-act="tab" data-tab="listen">まとめてきく ${unheard}</button>` : ''}</div>
@@ -1375,8 +1381,21 @@ music.player.subscribe(st => {
     $$(`.post[data-post="${p.id}"]`).forEach(card => { const tmp = document.createElement('div'); tmp.innerHTML = postCard(p); const n = tmp.firstElementChild; n.classList.add('unlocked'); card.replaceWith(n); });
     badges(); if (S.tab === 'home') renderHome();
     if (p.comment) buzz([8, 30, 8]);
-  }).catch(() => { setTimeout(() => V8.listened.delete(p.id), 1500); });   // 再生を止めていても、少し待ってまた試す
+  }).catch(() => { V8.listened.delete(p.id); retryUnlock(p, 0); });
 });
+// サーバーの確認が間に合わなかったとき：再生を止めていても、少し待って自分でもう一度試す（最大5回）
+function retryUnlock(p, n) {
+  if (n >= 5 || V8.listened.has(p.id) || p.comment != null) return;
+  setTimeout(() => {
+    if (V8.listened.has(p.id)) return;
+    V8.listened.add(p.id);
+    api.markListened(p.id).then(r => {
+      p.i_listened = true; if (r?.comment != null) p.comment = r.comment;
+      $$(`.slide[data-post="${p.id}"]`).forEach(sl => { const cm = sl.querySelector('.sl-cm'); if (cm) cm.innerHTML = p.comment ? `<p class="cm-open unlocked">${esc(p.comment)}</p>` : ''; sl.querySelector('.listen-ring')?.classList.add('done'); });
+      badges(); if (S.tab === 'home') renderHome(); if (p.comment) buzz([8, 30, 8]);
+    }).catch(() => { V8.listened.delete(p.id); retryUnlock(p, n + 1); });
+  }, 2500);
+}
 
 // ④ 今日の虹
 function rainbowHTML() {
@@ -1390,9 +1409,12 @@ function rainbowHTML() {
   const posted = moods.reduce((a, m) => a + m.n, 0);
   const add = (key, n, c, dashed) => { const t = Math.max(5, Math.round(TH * n / people)); bands.push({ key, r, t, c, dashed }); r -= t; };
   moods.forEach(m => add(m.e, m.n, MOOD_META[m.e]?.c || '#ccc', false));
-  if (R.waiting) add('wait', R.waiting, 'rgba(236,235,231,.07)', true);
+  // まだ自分がたしていないときは、自分の分を淡く（押すと投稿へ）。ほかの人の空きはさらに薄く
+  if (!R.me) add('me', 1, 'rgba(236,235,231,.16)', 'me');
+  const others = Math.max(0, (R.waiting || 0) - (R.me ? 0 : 1));
+  if (others) add('wait', others, 'rgba(236,235,231,.06)', true);
   const pick = S.rbPick;
-  const band = b => `<button class="rb-band ${b.dashed ? 'dash' : ''} ${S.justAdded === b.key ? 'rb-new' : ''}" ${b.dashed ? 'tabindex="-1"' : `data-act="rb-pick" data-e="${b.key}"`} aria-label="${b.dashed ? 'まだの人' : esc(MOOD_META[b.key]?.label || '')}"
+  const band = b => `<button class="rb-band ${b.dashed === 'me' ? 'mine-empty' : b.dashed ? 'dash' : ''} ${S.justAdded === b.key ? 'rb-new' : ''}" ${b.dashed === 'me' ? 'data-act="compose"' : b.dashed ? 'tabindex="-1"' : `data-act="rb-pick" data-e="${b.key}"`} aria-label="${b.dashed === 'me' ? 'あなたの色をたす' : b.dashed ? 'まだの人' : esc(MOOD_META[b.key]?.label || '')}"
       style="left:${Rr - b.r}px;top:${cy - b.r}px;width:${b.r * 2}px;height:${b.r}px;border-width:${b.t}px ${b.t}px 0 ${b.t}px;border-color:${b.c};border-radius:${b.r}px ${b.r}px 0 0;opacity:${pick && pick !== b.key ? .3 : 1}"></button>`;
   const meE = R.me; const meC = meE ? MOOD_META[meE]?.c : null;
   const headline = people <= 1 ? (meE ? 'あなたの色で、虹が始まりました' : '今日の虹は、まだ空のまま')
@@ -1893,7 +1915,7 @@ function renderOB() {
   const dots = n => `<div class="dots">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div>`;
   if (st === 'welcome') {
     ob.innerHTML = `<div class="ob-inner"><div class="welcome"><img src="/logo-mark.png" alt=""><h1>hearme</h1><div class="tag">きもちを、音楽で届ける</div><div class="wave">${[5, 12, 20, 9, 24, 13, 6].map((h, i) => `<i style="height:${h}px;animation-delay:${i * .1}s"></i>`).join('')}</div>
-      <div class="muted" style="font-size:13.5px;line-height:1.9;margin-top:34px">言葉にしにくい今日の気分を、1曲で。<br>フレンドと、静かにつながる場所。</div></div>
+      <div class="muted" style="font-size:13.5px;line-height:1.9;margin-top:34px">今日の気分を、1曲とひとつの色に。<br>友達の色が重なって、毎日ちがう虹になる。</div></div>
       <label class="consent"><input type="checkbox" id="ob-agree" ${OB.agree ? 'checked' : ''}><span><b>13歳以上</b>で、<a href="/terms.html" target="_blank" rel="noopener">利用規約</a>と<a href="/privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>に同意します<br><small>18歳未満の方は保護者の同意を得てください</small></span></label>
       <button class="btn p w" style="height:54px" data-ob="start">はじめる</button>
       <button class="btn w" style="margin-top:6px;color:var(--tx2)" data-ob="login">アカウントをお持ちの方</button>

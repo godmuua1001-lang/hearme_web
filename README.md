@@ -1,38 +1,42 @@
-# hearme v7
+# hearme
 
-きもちを、音楽で届ける。今日の気分を1曲でシェアする、静かなSNS（PWA）。
+**今日の気分を、1曲とひとつの色に。友達の色が重なって、毎日ちがう虹になる。**
 
-- フロント：素のHTML/CSS/JS（ビルド不要）→ Vercel にそのまま配信
-- サーバー：Supabase（DB・匿名ログイン・メールOTP・リアルタイム・Edge Function）
-- 音楽：iTunes Search API（30秒試聴）/ Apple Music ランキング
+hearme は、仲のいい友達どうしで「今日の気分」を曲と色で交換する、静かな音楽SNS（PWA）です。
 
-## ファイル
-| ファイル | 役割 |
+- 本番：https://hearme-web-two.vercel.app/
+- 対象：13歳以上・招待コードでつながったフレンドだけ
+
+## 体験の中心
+1. **気分 → 曲 → 虹にたす**：10色の気分から1つ選び、その気分の1曲を選ぶ。
+2. **今日の虹**：自分とフレンドの色が集まって、その日だけの虹になる（色＝気分、太さ＝人数）。気に入った日の虹はコレクションに残せる。
+3. **聴くと開く**：フレンドの曲を15秒聴くと、添えられた「ひとこと」が開く（サーバー側で時間を検証）。
+4. **寄り添う**：雨の色（悲しい・さみしい・モヤモヤ）の友達に、そっと1曲を贈れる。
+
+## 画面
+| タブ | 内容 |
 |---|---|
-| `index.html` / `styles.css` / `app.js` | 画面とUI |
-| `api.js` | データ層（Supabase / デモモード） |
-| `music.js` | 曲検索・ランキング・試聴プレイヤー |
-| `config.js` | Supabase の URL と公開キー（空ならデモモード） |
-| `sw.js` | オフライン起動・プッシュ通知 |
-| `supabase/schema.sql` | DB・権限・関数（SQL Editor で実行） |
-| `supabase/push-setup.sql` | 通知の配線（DM通知・毎日のhearmeの時間） |
-| `supabase/functions/push/index.ts` | 通知を送る Edge Function |
+| そら | 今日の虹、今日のあなたの1曲、とどいた曲、まだ空のフレンド |
+| きく | フレンドの曲を1曲ずつ全画面で。縦スワイプで次へ |
+| ＋ | 気分 → 曲 → 虹にたす の3ステップ |
+| とどいた | おしらせ（贈りもの・聴いてくれた・シンクロ）とメッセージ |
+| じぶん | プロフィール、お気に入りの曲、虹コレクション、最近の色 |
 
-## セットアップ状況
-- [x] Supabase プロジェクト作成・`schema.sql` 実行・匿名ログインON
-- [x] メールはSupabase標準（リンク方式）。URL Configuration の Site URL を本番URLに
-- [ ] （任意）独自SMTP（Resend等）を設定 → テンプレートに `{{ .Token }}` を入れると6桁コードでもログイン可・送信上限も解除
-- [ ] プッシュ通知：Edge Function `push` をデプロイ → Secrets 設定 → `push-setup.sql` 実行
-- [ ] （任意）Googleログイン：Google Cloud で OAuth 作成 → Supabase に設定 → `config.js` の `GOOGLE_LOGIN = true`
+## 構成
+- フロント：素のHTML/CSS/JS（ES Modules・ビルドなし）を Vercel で配信
+  - `app.js`（画面）/ `api.js`（Supabase とデモモードの切替）/ `music.js`（iTunes検索・試聴）/ `sw.js`
+- サーバー：Supabase（Postgres + RLS + SECURITY DEFINER 関数 + Realtime）
+  - SQL は `supabase/` に。`schema → security → ai → v8 → v9 → v9.1 → v10 → v10.1` の順に適用
+- Edge Functions：`push`（Web Push）、`recommend`（AI選曲。現在は停止中）
+- Vercel Functions：`api/itunes.js`（iTunes中継）、`api/art.js`（画像中継）
 
 ## 安全設計
-- DM はフレンド（招待コードを交換した相手）どうしのみ。DBのRLSで強制
-- 「みんな」の投稿は匿名。作者IDは返さない（`public_feed()`）
-- ブロック・通報・アカウント削除あり。投稿は1日3回まで
+- フレンド（招待コードを交換した相手）どうしだけがつながる。招待コードは本人しか読めない
+- データの読み書きは RLS と、権限を絞った関数経由のみ
+- 「ひとこと」はテーブル直接読取・リアルタイム配信から除外し、15秒の試聴をサーバーで確認してから返す
+- 投稿日時・1日3回の上限・DMの送信頻度（1分20通/1日500通）・通報の頻度はサーバー側で強制
+- ブロック・通報・アカウント削除・相談窓口の案内あり
+- 外部レビュー（2026-10）で見つかった指摘は v10.1 で修正済み
 
-## 運用メモ（2026-10 セキュリティレビュー）
-- `supabase/security.sql`：招待コード総当たり対策（失敗1時間10回まで）、画像URLをAppleの配信元に限定、アイコン形式の制限、DM添付サイズ制限
-- `vercel.json`：セキュリティヘッダー（クリックジャッキング・MIME偽装対策など）
-- **通報の確認**：Supabase → Table Editor → `reports` を定期的に見る（対応したら該当投稿を削除／ユーザーをBAN）
-- **公開前にやること**：利用規約・プライバシーポリシー（AIにGemini無料枠を使う旨を明記）、匿名登録のCAPTCHA（Authentication → Attack Protection）
-- AI選曲：`supabase/ai.sql` ＋ Edge Function `recommend`（Secrets: `GEMINI_API_KEY`、任意で `AI_PROVIDER=anthropic` ＋ `ANTHROPIC_API_KEY`）
+## AIの使い方（開発）
+設計・実装・テストに AI（Claude）を使い、仕様の判断・優先順位・外部レビューの取り込みは人が行っています。AIが書いたSQLは、隔離したテスト用DBで権限・制限・同時実行を確かめてから本番に適用しています。

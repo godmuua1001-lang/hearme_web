@@ -1,7 +1,7 @@
 {
   "name": "hearme",
   "short_name": "hearme",
-  "description": "きもちを、音楽で届ける。今日の気分を1曲でシェアする、静かなSNS。",
+  "description": "今日の気分を、1曲とひとつの色に。友達の色が重なって、毎日ちがう虹になる。",
   "lang": "ja",
   "start_url": "/",
   "scope": "/",

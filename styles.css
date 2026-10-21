@@ -721,3 +721,9 @@ body.chat-open #mini{display:none;}
 .invite.sm .inv-sample{width:84px;}
 .invite.sm b{font-size:15px;}
 .invite.sm p{font-size:12.5px;margin:6px 0 14px;}
+/* 自分がまだの部分（押すと投稿へ）と、たした直後に明るくなる演出 */
+.rb-band.mine-empty{cursor:pointer;filter:none;animation:mineEmpty 2.6s ease-in-out infinite;}
+@keyframes mineEmpty{0%,100%{opacity:.7}50%{opacity:1}}
+.rb-band.rb-new{animation:rbglow .6s ease-out both;}
+@keyframes rbglow{0%{filter:brightness(1.9) saturate(1.2) drop-shadow(0 0 14px var(--glowc,rgba(255,255,255,.6)))}100%{filter:none}}
+@media (prefers-reduced-motion: reduce){ .rb-band.rb-new,.rb-band.mine-empty{animation:none;} }
