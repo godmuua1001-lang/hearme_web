@@ -7,7 +7,7 @@ import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 import * as CFG from './config.js';
 const AI_ON = CFG.AI_ENABLED !== false && CFG.AI_ENABLED !== undefined ? true : false;
 
-const VERSION = '10.5.2';
+const VERSION = '10.5.3';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1276,7 +1276,7 @@ const A = {
 // ═══════════════════════════════════════════════════════════════
 // v8 ── 「気持ちを届ける」15機能
 // ═══════════════════════════════════════════════════════════════
-const V8 = { started: new Set(), notifs: [], gifts: [], relays: [], letters: [], notes: [], night: [], careShown: false, listened: new Set(), G: null, sub: null };
+const V8 = { started: new Set(), unlocking: new Set(), notifs: [], gifts: [], relays: [], letters: [], notes: [], night: [], careShown: false, listened: new Set(), G: null, sub: null };
 const tone = m => { const e = splitMood(m || '')[0]; return ['😊', '🤩', '🔥', '🥰'].includes(e) ? 1 : ['😢', '🥺', '😤'].includes(e) ? -1 : 0; };
 const WEATHER = m => { const e = splitMood(m || '')[0]; return e === '😴' ? '🌙' : e === '😤' ? '⛈️' : tone(m) > 0 ? '☀️' : tone(m) < 0 ? '🌧️' : '⛅'; };
 const songOf = s => s ? ({ title: String(s.title || '').slice(0, 200), artist: String(s.artist || '').slice(0, 200),
@@ -1369,34 +1369,35 @@ music.player.subscribe(st => {
     $$(`[data-ring="${p.id}"]`).forEach(ring => ring.style.setProperty('--pct', `${Math.min(100, (st.t / LISTEN_SEC) * 100)}%`));
     $$(`[data-lock="${p.id}"] span`).forEach(lock => { if (st.playing && st.t < LISTEN_SEC) lock.textContent = `あと${Math.ceil(LISTEN_SEC - st.t)}秒で、ひとことが開きます`; });
   }
-  if (!st.playing || !p || p.mine || st.t < LISTEN_SEC || V8.listened.has(p.id)) return;
-  V8.listened.add(p.id);
-  api.markListened(p.id).then(r => {
-    p.i_listened = true;
-    if (r?.comment != null) p.comment = r.comment;
-    $$(`.slide[data-post="${p.id}"]`).forEach(sl => {
-      const cm = sl.querySelector('.sl-cm'); if (cm) cm.innerHTML = p.comment ? `<p class="cm-open unlocked">${esc(p.comment)}</p>` : '';
-      sl.querySelector('.listen-ring')?.classList.add('done');
-    });
-    $$(`.post[data-post="${p.id}"]`).forEach(card => { const tmp = document.createElement('div'); tmp.innerHTML = postCard(p); const n = tmp.firstElementChild; n.classList.add('unlocked'); card.replaceWith(n); });
-    badges(); if (S.tab === 'home') renderHome();
-    if (p.comment) buzz([8, 30, 8]);
-  }).catch(() => { V8.listened.delete(p.id); retryUnlock(p, 0); });
+  if (!st.playing || !p || p.mine || st.t < LISTEN_SEC || V8.listened.has(p.id) || V8.unlocking.has(p.id)) return;
+  unlockComment(p);
 });
-// サーバーの確認が間に合わなかったとき：再生を止めていても、少し待って自分でもう一度試す（最大8回、2.5秒ずつ間隔を空けて）
-function retryUnlock(p, n) {
-  if (n >= 8 || V8.listened.has(p.id) || p.comment != null) return;
-  setTimeout(async () => {
-    if (V8.listened.has(p.id)) return;
-    // 「聴きはじめた」の記録が届いていなければ、ここで送り直す（その場合は記録から14秒後に開く）
-    if (!V8.started.has(p.id)) { V8.started.add(p.id); if (!await api.startListen(p.id)) { V8.started.delete(p.id); retryUnlock(p, n + 1); return; } }
-    V8.listened.add(p.id);
-    api.markListened(p.id).then(r => {
+// ひとことを開く処理は、ここ1か所だけで動かす（同時に1つ・失敗したら2.5秒あけて最大8回）
+// 再生中のイベントからは、処理中・待機中なら何もしない（間隔が詰まらないように）
+function unlockComment(p, n = 0) {
+  if (V8.listened.has(p.id)) { V8.unlocking.delete(p.id); return; }
+  if (n === 0 && V8.unlocking.has(p.id)) return;
+  V8.unlocking.add(p.id);
+  const again = () => {
+    if (n + 1 >= 8) { V8.unlocking.delete(p.id); return; }   // あきらめたら、次に再生したときにまた最初から
+    setTimeout(() => unlockComment(p, n + 1), 2500);
+  };
+  (async () => {
+    // 「聴きはじめた」の記録が届いていなければ、先に送り直す（その場合は記録から14秒後に開く）
+    if (!V8.started.has(p.id)) { V8.started.add(p.id); if (!await api.startListen(p.id)) { V8.started.delete(p.id); again(); return; } }
+    try {
+      const r = await api.markListened(p.id);
+      V8.listened.add(p.id); V8.unlocking.delete(p.id);
       p.i_listened = true; if (r?.comment != null) p.comment = r.comment;
-      $$(`.slide[data-post="${p.id}"]`).forEach(sl => { const cm = sl.querySelector('.sl-cm'); if (cm) cm.innerHTML = p.comment ? `<p class="cm-open unlocked">${esc(p.comment)}</p>` : ''; sl.querySelector('.listen-ring')?.classList.add('done'); });
-      badges(); if (S.tab === 'home') renderHome(); if (p.comment) buzz([8, 30, 8]);
-    }).catch(() => { V8.listened.delete(p.id); retryUnlock(p, n + 1); });
-  }, 2500);
+      $$(`.slide[data-post="${p.id}"]`).forEach(sl => {
+        const cm = sl.querySelector('.sl-cm'); if (cm) cm.innerHTML = p.comment ? `<p class="cm-open unlocked">${esc(p.comment)}</p>` : '';
+        sl.querySelector('.listen-ring')?.classList.add('done');
+      });
+      $$(`.post[data-post="${p.id}"]`).forEach(card => { const tmp = document.createElement('div'); tmp.innerHTML = postCard(p); const el = tmp.firstElementChild; el.classList.add('unlocked'); card.replaceWith(el); });
+      badges(); if (S.tab === 'home') renderHome();
+      if (p.comment) buzz([8, 30, 8]);
+    } catch { again(); }
+  })();
 }
 
 // ④ 今日の虹

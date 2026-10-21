@@ -418,7 +418,7 @@ class DemoAPI {
   async gifts() { return this._v8().gifts; }
   async openGift(id) { const g = this._v8().gifts.find(x => x.id === id); if (g) g.opened_at ||= now(); this.save(); }
   async startListen() { return true; }
-  async markListened(postId) { const d = this._v8(); if (!d.listens.includes(postId)) { d.listens.push(postId); this.save(); } return { comment: this.db.posts.find(p => p.id === postId)?.comment ?? null }; }
+  async markListened(postId) { if (fakeFail('mark')) throw new Error('Failed to fetch (test)'); const d = this._v8(); if (!d.listens.includes(postId)) { d.listens.push(postId); this.save(); } return { comment: this.db.posts.find(p => p.id === postId)?.comment ?? null }; }
   async friendProfile(id) {
     const p = this.person(id); if (!p) throw new Error('NOT_FOUND');
     const posts = this.sorted(this.db.posts.filter(x => x.user_id === id)).map(x => this.postJSON(x, true));
