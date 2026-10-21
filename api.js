@@ -168,7 +168,14 @@ class LiveAPI {
   async sendGift(to, song, message, anonymous, postId) { return this._r(await this.sb.rpc('send_gift', { p_to: to, p_song: song, p_message: message || '', p_anonymous: !!anonymous, p_post: postId || null })); }
   async gifts() { return this._r(await this.sb.rpc('my_gifts')) || []; }
   async openGift(id) { return this._r(await this.sb.rpc('open_gift', { p_id: id })); }
-  async startListen(postId) { try { await this.sb.rpc('start_listen', { p_post: postId }); } catch { /* 未適用 */ } }
+  // 「聴きはじめた」をサーバーに記録。通信が不安定でも届くよう、最大3回まで送り直す
+  async startListen(postId) {
+    for (let i = 0; i < 3; i++) {
+      try { const { error } = await this.sb.rpc('start_listen', { p_post: postId }); if (!error) return true; } catch { /* 通信失敗 */ }
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    }
+    return false;
+  }
   async markListened(postId) {
     // サーバーは「聴きはじめてから14秒」を確かめる。まだなら少し待ってもう一度
     for (let i = 0; i < 3; i++) {
@@ -406,7 +413,7 @@ class DemoAPI {
   }
   async gifts() { return this._v8().gifts; }
   async openGift(id) { const g = this._v8().gifts.find(x => x.id === id); if (g) g.opened_at ||= now(); this.save(); }
-  async startListen() { }
+  async startListen() { return true; }
   async markListened(postId) { const d = this._v8(); if (!d.listens.includes(postId)) { d.listens.push(postId); this.save(); } return { comment: this.db.posts.find(p => p.id === postId)?.comment ?? null }; }
   async friendProfile(id) {
     const p = this.person(id); if (!p) throw new Error('NOT_FOUND');

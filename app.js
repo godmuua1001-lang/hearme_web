@@ -7,7 +7,7 @@ import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 import * as CFG from './config.js';
 const AI_ON = CFG.AI_ENABLED !== false && CFG.AI_ENABLED !== undefined ? true : false;
 
-const VERSION = '10.5.0';
+const VERSION = '10.5.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1364,7 +1364,7 @@ async function giftsPage() {
 const LISTEN_SEC = 15;
 music.player.subscribe(st => {
   const s = st.song; const p = s?.id && S.posts.get(s.id);
-  if (p && !p.mine && st.playing && !V8.started.has(p.id)) { V8.started.add(p.id); api.startListen(p.id); }   // サーバーに「聴きはじめた」を記録
+  if (p && !p.mine && st.playing && !V8.started.has(p.id)) { V8.started.add(p.id); api.startListen(p.id).then(ok => { if (!ok) V8.started.delete(p.id); }); }   // サーバーに「聴きはじめた」を記録（届かなければ次の再生でまた送る）
   if (p && !p.mine) {
     $$(`[data-ring="${p.id}"]`).forEach(ring => ring.style.setProperty('--pct', `${Math.min(100, (st.t / LISTEN_SEC) * 100)}%`));
     $$(`[data-lock="${p.id}"] span`).forEach(lock => { if (st.playing && st.t < LISTEN_SEC) lock.textContent = `あと${Math.ceil(LISTEN_SEC - st.t)}秒で、ひとことが開きます`; });
@@ -1385,9 +1385,11 @@ music.player.subscribe(st => {
 });
 // サーバーの確認が間に合わなかったとき：再生を止めていても、少し待って自分でもう一度試す（最大5回）
 function retryUnlock(p, n) {
-  if (n >= 5 || V8.listened.has(p.id) || p.comment != null) return;
-  setTimeout(() => {
+  if (n >= 8 || V8.listened.has(p.id) || p.comment != null) return;
+  setTimeout(async () => {
     if (V8.listened.has(p.id)) return;
+    // 「聴きはじめた」の記録が届いていなければ、ここで送り直す（その場合は記録から14秒後に開く）
+    if (!V8.started.has(p.id)) { V8.started.add(p.id); if (!await api.startListen(p.id)) { V8.started.delete(p.id); retryUnlock(p, n + 1); return; } }
     V8.listened.add(p.id);
     api.markListened(p.id).then(r => {
       p.i_listened = true; if (r?.comment != null) p.comment = r.comment;
