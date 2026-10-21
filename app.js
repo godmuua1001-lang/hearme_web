@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '10.2.0';
+const VERSION = '10.2.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -196,7 +196,8 @@ function confirmSheet({ title, text = '', ok = 'OK', danger = false }) {
 const pageStack = [];
 function openPage(id) {
   const pg = $('#' + id); pg.classList.add('on'); pg.style.transform = '';
-  if (!pageStack.includes(id)) pageStack.push(id);
+  if (pageStack.includes(id)) pageStack.splice(pageStack.indexOf(id), 1);
+  pageStack.push(id); pg.style.zIndex = 70 + pageStack.length;   // あとから開いた画面が必ず上
   history.pushState({ hm: 'page', id }, '');
 }
 function closePage(id = pageStack[pageStack.length - 1], fromPop = false) {
@@ -711,7 +712,7 @@ function profileHTML(d, self) {
   const did = esc(d.id);
   return `<div class="pf">
     <div class="pf-top"><div class="pf-ava" style="--mc:${mc}">${ava(d, 86)}</div>
-      <div class="pf-stats"><div><b>${d.days ?? 0}</b><small>色の日</small></div><div><b>${rbs.length}</b><small>虹</small></div><div><b>${d.friends ?? 0}</b><small>フレンド</small></div></div></div>
+      <div class="pf-stats"><button data-act="pf-jump" data-to="pf-col"><b>${d.days ?? 0}</b><small>色の日</small></button><button data-act="pf-jump" data-to="pf-rb"><b>${rbs.length}</b><small>虹</small></button>${self ? `<button data-act="friends-list"><b>${d.friends ?? 0}</b><small>フレンド</small></button>` : `<div><b>${d.friends ?? 0}</b><small>フレンド</small></div>`}</div></div>
     <div class="pf-name">${esc(d.name || '')}</div>${d.bio ? `<div class="pf-bio">${esc(d.bio)}</div>` : ''}
     ${!self && d.since ? `<div class="pf-since">${mdLabel(d.since)} からフレンド</div>` : ''}
     <div class="pf-btns">${self
@@ -722,11 +723,11 @@ function profileHTML(d, self) {
     ${fav.length ? `<div class="favs">${fav.map((s, i) => `<div class="fav">${art(s, 0, playBtn(s))}<div class="fav-ti ellip">${esc(s.title)}</div><div class="fav-ar ellip">${esc(s.artist)}</div>${self ? `<button class="fav-x" data-act="fav-del" data-i="${i}" aria-label="外す">${I.x.replace('<svg', '<svg width="11" height="11"')}</button>` : ''}</div>`).join('')}</div>`
       : `<div class="pf-empty">${self ? `<button data-act="fav-add">好きな曲を5曲まで飾れます</button>` : 'まだありません'}</div>`}
 
-    <div class="pf-sec"><b>虹コレクション</b>${self && !savedToday && S.rainbow?.moods?.length ? `<button data-act="rb-save">${I.plus.replace('<svg', '<svg width="14" height="14"')} 今日の虹を残す</button>` : ''}</div>
+    <div class="pf-sec" data-anchor="pf-rb"><b>虹コレクション</b>${self && !savedToday && S.rainbow?.moods?.length ? `<button data-act="rb-save">${I.plus.replace('<svg', '<svg width="14" height="14"')} 今日の虹を残す</button>` : ''}</div>
     ${rbs.length ? `<div class="rbs">${rbs.map(r => `<button class="rbc" data-act="rb-open" data-id="${esc(r.id)}" data-u="${did}">${miniRainbow(r.data, 120)}<span>${mdLabel(r.day)}</span><small>${r.data?.total || 1}人</small></button>`).join('')}</div>`
       : `<div class="pf-empty">${self ? '気に入った日の虹を、ここに残しておけます' : 'まだありません'}</div>`}
 
-    <div class="pf-sec"><b>最近の色</b></div>
+    <div class="pf-sec" data-anchor="pf-col"><b>最近の色</b></div>
     <div class="card pf-cal"><div class="cal2">${cal.join('')}</div></div>
 
     <div class="pf-sec"><b>${self ? 'あなたがたした曲' : '最近の曲'}</b></div>
@@ -747,8 +748,6 @@ function renderMe() {
     <div class="hd"><h1 class="ellip">${esc(p.name || 'じぶん')}</h1><button class="icon-btn" data-act="settings" aria-label="設定">${I.gear}</button></div>
     ${api.user()?.anonymous && S.mine.length ? `<button class="notice" data-act="settings"><b>メールを登録しておこう</b><small>機種変更やデータ削除で、色の記録が消えないように</small>${I.back.replace('<svg', '<svg style="transform:rotate(180deg)"')}</button>` : ''}
     ${profileHTML(myPf(), true)}
-    <div class="pf-sec"><b>フレンド ${S.friends.length}</b><button data-act="add-friend">${I.userplus.replace('<svg', '<svg width="15" height="15"')} 追加</button></div>
-    ${S.friends.length ? `<div class="pf-friends">${S.friends.map(f => `<button class="pf-f" data-act="profile" data-id="${esc(f.id)}">${ava(f, 58)}<span class="ellip">${esc(f.name)}</span></button>`).join('')}</div>` : `<div class="pf-empty"><button data-act="share-invite">招待リンクを送る</button></div>`}
     <div style="height:100px"></div>`;
 }
 async function openProfile(id) {
@@ -757,11 +756,28 @@ async function openProfile(id) {
   closeSheet();
   const f = S.friends.find(x => x.id === id) || PF.cache.get(id);
   const head = subHead(esc(f?.name || ''));
-  openSub(`${head}<div class="page-body" id="pf-body">${f ? profileHTML({ ...f, posts: [], rainbows: [], fav_songs: [] }, false).replace('<div class="pf">', '<div class="pf loading">') : '<div style="padding:40px"><div class="spin" style="margin:auto"></div></div>'}</div>`);
+  const pg = $('#pg-prof'); pg.innerHTML = `${head}<div class="page-body" id="pf-body">${f ? profileHTML({ ...f, posts: [], rainbows: [], fav_songs: [] }, false).replace('<div class="pf">', '<div class="pf loading">') : '<div style="padding:40px"><div class="spin" style="margin:auto"></div></div>'}</div>`;
+  if (!pageStack.includes('pg-prof')) openPage('pg-prof');
   try {
     const d = await api.friendProfile(id); PF.cache.set(id, d); remember(d.posts || []);
-    const b = $('#pf-body'); if (b && pageStack.includes('pg-sub')) b.innerHTML = profileHTML(d, false);
+    const b = $('#pf-body'); if (b && pageStack.includes('pg-prof')) b.innerHTML = profileHTML(d, false);
   } catch (e) { const b = $('#pf-body'); if (b) b.insertAdjacentHTML('beforeend', `<div class="pf-empty">${esc(errText(e))}</div>`); }
+}
+// フレンド一覧（インスタの「フォロー中」のように）
+function friendsPage() {
+  const rows = q => {
+    const k = (q || '').trim().toLowerCase();
+    const list = S.friends.filter(f => !k || f.name.toLowerCase().includes(k) || (f.bio || '').toLowerCase().includes(k));
+    if (!S.friends.length) return `<div class="empty2"><b>まだフレンドがいません</b><p>招待コードを交換すると、ここに並びます。</p><button class="btn p" style="margin-top:16px" data-act="share-invite">${I.share} 招待リンクを送る</button></div>`;
+    if (!list.length) return `<div class="empty2"><p>「${esc(q)}」は見つかりませんでした</p></div>`;
+    return list.map(f => { const lp = f.last_post; const c = lp && isToday(lp.created_at) ? moodOf(lp.mood).c : null;
+      return `<div class="fl-row"><button class="fl-who" data-act="profile" data-id="${esc(f.id)}"><span class="fl-av" ${c ? `style="--mc:${c}"` : ''}>${ava(f, 50)}</span><span class="fl-tx"><b class="ellip">${esc(f.name)}</b><small class="ellip">${lp ? `${esc(lp.title)} · ${rel(lp.created_at)}` : esc(f.bio || 'まだ色がありません')}</small></span></button>
+        <button class="fl-btn" data-act="chat" data-id="${esc(f.id)}">メッセージ</button><button class="icon-btn sm" data-act="friend-menu" data-id="${esc(f.id)}" aria-label="メニュー">${I.more}</button></div>`; }).join('');
+  };
+  openSub(`${subHead(`フレンド ${S.friends.length}`, `<button class="icon-btn" style="background:none;border:none" data-act="add-friend" aria-label="フレンド追加">${I.userplus}</button>`)}
+    <div class="page-body">${S.friends.length > 3 ? `<div class="srch" style="margin:10px 16px 6px">${I.search}<input id="fl-q" placeholder="検索" autocomplete="off"></div>` : ''}<div id="fl-list" style="padding-top:6px">${rows('')}</div></div>`, pg => {
+    const q = pg.querySelector('#fl-q'); if (q) q.oninput = () => { $('#fl-list').innerHTML = rows(q.value); };
+  });
 }
 function rainbowSheet(r, self) {
   const moods = RAINBOW_ORDER.map(e => (r.data?.moods || []).find(m => m.e === e)).filter(Boolean);
@@ -1074,6 +1090,8 @@ const A = {
   tab: el => setTab(el.dataset.tab),
   listen: el => goListen(el.dataset.id),
   profile: el => openProfile(el.dataset.id),
+  'friends-list': () => friendsPage(),
+  'pf-jump': el => { const t = el.closest('.page-body, .tab')?.querySelector(`[data-anchor="${el.dataset.to}"]`); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
   'fav-add': () => openSongPicker(async s => {
     const fav = [...(S.profile?.fav_songs || [])];
     if (fav.length >= 5) { toast('お気に入りは5曲までです'); return; }
@@ -1109,7 +1127,7 @@ const A = {
   mood: el => { C.mood = el.dataset.m; buzz(6); renderComposer(); },
   pubtoggle: el => { C.pub = !C.pub; el.querySelector('.sw').classList.toggle('on', C.pub); buzz(5); },
   post: () => submitPost(),
-  'open-post': el => { const p = S.posts.get(el.dataset.id); if (p && !p.mine && listenQueue().some(x => x.id === p.id)) { if (pageStack.includes('pg-sub')) closePage('pg-sub'); goListen(p.id); } else openPost(el.dataset.id); },
+  'open-post': el => { const p = S.posts.get(el.dataset.id); if (p && !p.mine && listenQueue().some(x => x.id === p.id)) { ['pg-prof', 'pg-sub'].forEach(id => { if (pageStack.includes(id)) closePage(id); }); goListen(p.id); } else openPost(el.dataset.id); },
   'post-menu': el => postMenu(el.dataset.id),
   react: async el => {
     const p = S.posts.get(el.dataset.id); if (!p) return;
