@@ -1383,7 +1383,7 @@ music.player.subscribe(st => {
     if (p.comment) buzz([8, 30, 8]);
   }).catch(() => { V8.listened.delete(p.id); retryUnlock(p, 0); });
 });
-// サーバーの確認が間に合わなかったとき：再生を止めていても、少し待って自分でもう一度試す（最大5回）
+// サーバーの確認が間に合わなかったとき：再生を止めていても、少し待って自分でもう一度試す（最大8回、2.5秒ずつ間隔を空けて）
 function retryUnlock(p, n) {
   if (n >= 8 || V8.listened.has(p.id) || p.comment != null) return;
   setTimeout(async () => {
