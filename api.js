@@ -22,6 +22,7 @@ const ERR = {
   AI_BUSY: 'AIが混み合っています。少し待ってもう一度試してね',
   AI_ERROR: 'AIがうまく答えられませんでした。言い方を変えて試してね',
   EMPTY_RAINBOW: 'まだ今日の虹に色がありません',
+  RATE_LIMIT: '送りすぎです。少し時間をおいてね',
   NOT_FOUND: '見つかりませんでした',
 };
 export function errText(e) {
@@ -34,6 +35,7 @@ export function errText(e) {
   return m || 'エラーが発生しました';
 }
 
+const PCOLS = 'id,name,emoji,avatar,bio,created_at,fav_songs';
 const pairKey = (a, b) => [a, b].sort().join('_');
 
 // ═════════════════════ SUPABASE ═════════════════════
@@ -88,14 +90,23 @@ class LiveAPI {
   async signOut() { this.stop(); await this.sb.auth.signOut(); this.session = null; }
 
   // ── profile ──
+  // 招待コード・設定は本人だけが関数経由で読む（v10.1：フレンドからはコードが見えない）
+  async _withSettings(p) {
+    if (!p) return p;
+    let s = null;
+    try { s = this._r(await this.sb.rpc('my_settings')); } catch { /* v10.1.sql 未適用 */ }
+    if (!s) { const r = await this.sb.from('profiles').select('code,share_rain').eq('id', this.uid).maybeSingle(); s = r.data || {}; }
+    return { ...p, ...s };
+  }
   async myProfile() {
-    return this._r(await this.sb.from('profiles').select('*').eq('id', this.uid).maybeSingle());
+    return this._withSettings(this._r(await this.sb.from('profiles').select(PCOLS).eq('id', this.uid).maybeSingle()));
   }
   async createProfile(p) {
-    return this._r(await this.sb.from('profiles').upsert({ id: this.uid, ...p }).select().single());
+    return this._withSettings(this._r(await this.sb.from('profiles').upsert({ id: this.uid, ...p }).select(PCOLS).single()));
   }
   async updateProfile(p) {
-    return this._r(await this.sb.from('profiles').update(p).eq('id', this.uid).select().single());
+    const r = this._r(await this.sb.from('profiles').update(p).eq('id', this.uid).select(PCOLS).single());
+    return this._withSettings(r);
   }
   async deleteMe() { this._r(await this.sb.rpc('delete_me')); await this.signOut(); }
 
@@ -157,7 +168,16 @@ class LiveAPI {
   async sendGift(to, song, message, anonymous, postId) { return this._r(await this.sb.rpc('send_gift', { p_to: to, p_song: song, p_message: message || '', p_anonymous: !!anonymous, p_post: postId || null })); }
   async gifts() { return this._r(await this.sb.rpc('my_gifts')) || []; }
   async openGift(id) { return this._r(await this.sb.rpc('open_gift', { p_id: id })); }
-  async markListened(postId) { return this._r(await this.sb.rpc('mark_listened', { p_post: postId })); }
+  async startListen(postId) { try { await this.sb.rpc('start_listen', { p_post: postId }); } catch { /* 未適用 */ } }
+  async markListened(postId) {
+    // サーバーは「聴きはじめてから14秒」を確かめる。まだなら少し待ってもう一度
+    for (let i = 0; i < 3; i++) {
+      const r = this._r(await this.sb.rpc('mark_listened', { p_post: postId }));
+      if (!r?.wait) return r;
+      await new Promise(res => setTimeout(res, 2000));
+    }
+    throw new Error('LISTEN_WAIT');
+  }
   async todayRainbow() { return this._r(await this.sb.rpc('today_rainbow')); }
   // v10：プロフィール
   async friendProfile(id) { return this._r(await this.sb.rpc('friend_profile', { p_id: id })); }
@@ -386,6 +406,7 @@ class DemoAPI {
   }
   async gifts() { return this._v8().gifts; }
   async openGift(id) { const g = this._v8().gifts.find(x => x.id === id); if (g) g.opened_at ||= now(); this.save(); }
+  async startListen() { }
   async markListened(postId) { const d = this._v8(); if (!d.listens.includes(postId)) { d.listens.push(postId); this.save(); } return { comment: this.db.posts.find(p => p.id === postId)?.comment ?? null }; }
   async friendProfile(id) {
     const p = this.person(id); if (!p) throw new Error('NOT_FOUND');

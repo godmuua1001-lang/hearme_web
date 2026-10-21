@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '10.2.2';
+const VERSION = '10.3.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -137,7 +137,7 @@ function art(s, size, extra = '') {
 function playBtn(s, cls = '') {
   if (!s?.preview_url || !PREVIEW_RE.test(s.preview_url)) return '';
   const on = music.player.isCurrent(s) && music.player.state().playing;
-  return `<button class="play ${cls}" data-act="play" data-src="${esc(s.preview_url)}" aria-label="試聴">${on ? I.pause : I.play}</button>`;
+  return `<button class="play ${cls}" data-act="play" data-src="${esc(s.preview_url)}"${s.id && S.posts.get(s.id) === s ? ` data-post="${esc(s.id)}"` : ''} aria-label="試聴">${on ? I.pause : I.play}</button>`;
 }
 const songData = s => esc(JSON.stringify({ title: s.title, artist: s.artist, artwork: s.artwork, preview_url: s.preview_url, track_url: s.track_url, track_id: s.track_id }));
 const postedToday = () => S.mine.filter(p => isToday(p.created_at));
@@ -588,8 +588,11 @@ async function openChat(peerId) {
   inp.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !isIOS) { e.preventDefault(); chatSend(); } };
   S.chat.typing = api.joinTyping(peer.id, () => { if (!S.chat) return; S.chat.typingUntil = Date.now() + 4000; drawTyping(); setTimeout(drawTyping, 4100); });
   $('#chat').onscroll = () => { if ($('#chat').scrollTop < 60) loadOlder(); };
+  const me = S.chat;
   try {
-    S.chat.msgs = await api.messages(peer.id);
+    const msgs = await api.messages(peer.id);
+    if (S.chat !== me) return;   // 読み込み中に別のDMへ移ったら捨てる
+    S.chat.msgs = msgs;
     S.chat.done = S.chat.msgs.length < 50;
     drawChat(true);
     await api.markRead(peer.id);
@@ -602,6 +605,7 @@ async function loadOlder() {
   c.loadingOld = true; const box = $('#chat'); const h0 = box.scrollHeight;
   try {
     const older = await api.messages(c.peer.id, c.msgs[0].id);
+    if (S.chat !== c) return;
     c.done = older.length < 50; c.msgs = older.concat(c.msgs); drawChat();
     box.scrollTop = box.scrollHeight - h0;
   } catch { /* */ }
@@ -1118,7 +1122,7 @@ const A = {
   compose: () => { hideMoment(); openComposer(); },
   'close-sheet': () => closeSheet(),
   'close-page': () => closePage(),
-  play: el => { const s = songBySrc(el.dataset.src); if (s) { buzz(5); music.player.toggle(s); } },
+  play: el => { const s = (el.dataset.post && S.posts.get(el.dataset.post)) || songBySrc(el.dataset.src); if (s) { buzz(5); music.player.toggle(s); } },
   stop: () => music.player.stop(),
   pick: el => { C.song = C.results[+el.dataset.i]; buzz(6); renderComposer(); },
   'ai-go': () => askAI(),
@@ -1248,7 +1252,7 @@ const A = {
 // ═══════════════════════════════════════════════════════════════
 // v8 ── 「気持ちを届ける」15機能
 // ═══════════════════════════════════════════════════════════════
-const V8 = { notifs: [], gifts: [], relays: [], letters: [], notes: [], night: [], careShown: false, listened: new Set(), G: null, sub: null };
+const V8 = { started: new Set(), notifs: [], gifts: [], relays: [], letters: [], notes: [], night: [], careShown: false, listened: new Set(), G: null, sub: null };
 const tone = m => { const e = splitMood(m || '')[0]; return ['😊', '🤩', '🔥', '🥰'].includes(e) ? 1 : ['😢', '🥺', '😤'].includes(e) ? -1 : 0; };
 const WEATHER = m => { const e = splitMood(m || '')[0]; return e === '😴' ? '🌙' : e === '😤' ? '⛈️' : tone(m) > 0 ? '☀️' : tone(m) < 0 ? '🌧️' : '⛅'; };
 const songOf = s => s ? ({ title: String(s.title || '').slice(0, 200), artist: String(s.artist || '').slice(0, 200),
@@ -1336,6 +1340,7 @@ async function giftsPage() {
 const LISTEN_SEC = 15;
 music.player.subscribe(st => {
   const s = st.song; const p = s?.id && S.posts.get(s.id);
+  if (p && !p.mine && st.playing && !V8.started.has(p.id)) { V8.started.add(p.id); api.startListen(p.id); }   // サーバーに「聴きはじめた」を記録
   if (p && !p.mine) {
     $$(`[data-ring="${p.id}"]`).forEach(ring => ring.style.setProperty('--pct', `${Math.min(100, (st.t / LISTEN_SEC) * 100)}%`));
     $$(`[data-lock="${p.id}"] span`).forEach(lock => { if (st.playing && st.t < LISTEN_SEC) lock.textContent = `あと${Math.ceil(LISTEN_SEC - st.t)}秒で、ひとことが開きます`; });
@@ -1981,7 +1986,7 @@ async function startApp() {
   if (!LIVE) enrichDemo();
   // 戻ってきたら更新
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') { api.refreshUser?.().then(u => { if (u && S.user?.email !== u.email) { S.user = u; if (pageStack.includes('pg-settings')) openSettings(); if (u.email && !u.anonymous) toast('✅ メールの登録が完了しました'); } }).catch(() => {}); loadFeeds(); refreshThreads(); loadMoment(); if (S.chat) api.messages(S.chat.peer.id).then(m => { if (S.chat) { S.chat.msgs = m; drawChat(); api.markRead(S.chat.peer.id); } }).catch(() => {}); }
+    if (document.visibilityState === 'visible') { api.refreshUser?.().then(u => { if (u && S.user?.email !== u.email) { S.user = u; if (pageStack.includes('pg-settings')) openSettings(); if (u.email && !u.anonymous) toast('✅ メールの登録が完了しました'); } }).catch(() => {}); loadFeeds(); refreshThreads(); loadMoment(); if (S.chat) { const c0 = S.chat; api.messages(c0.peer.id).then(m => { if (S.chat === c0) { S.chat.msgs = m; drawChat(); api.markRead(S.chat.peer.id); } }).catch(() => {}); } }
   });
 }
 function handleDeepLink(q) {
