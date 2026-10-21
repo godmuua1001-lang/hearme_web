@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '10.1.1';
+const VERSION = '10.2.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -312,7 +312,7 @@ function todayByFriend() {
 function friendRow(f, p) {
   const mo = moodOf(p.mood); const heard = p.i_listened || V8.listened.has(p.id);
   return `<button class="fr ${heard ? 'heard' : ''}" style="--mc:${mo.c}" data-act="listen" data-id="${p.id}">
-    <span class="fr-av">${ava(f, 46)}</span>
+    <span class="fr-av" data-act="profile" data-id="${esc(f.id)}">${ava(f, 46)}</span>
     <span class="fr-tx"><b class="ellip">${esc(f.name)}</b><small class="ellip">${esc(p.title)}<i>·</i>${esc(p.artist)}</small></span>
     <span class="fr-r">${heard ? `<span class="fr-heard">${I.check} 聴いた</span>` : `<span class="fr-new">${I.headphones} きく</span>`}</span></button>`;
 }
@@ -333,7 +333,7 @@ function renderHome() {
   else list = `
     ${posted.length ? `<div class="sec2"><span>今日とどいた曲</span>${unheard ? `<button class="sec2-go" data-act="tab" data-tab="listen">まとめてきく ${unheard}</button>` : ''}</div>
       <div class="frs">${posted.map(f => friendRow(f, tp.get(f.id))).join('')}</div>` : ''}
-    ${waiting.length ? `<div class="sec2"><span>まだ空のまま</span></div><div class="frs wait">${waiting.map(f => `<div class="fr wait">${ava(f, 40)}<span class="fr-tx"><b class="ellip">${esc(f.name)}</b><small>${f.last_post ? `最後の色 · ${rel(f.last_post.created_at)}` : 'まだ色がありません'}</small></span><button class="fr-gift" data-act="gift" data-id="${esc(f.id)}" aria-label="${esc(f.name)}に曲を贈る">${I.gift}</button></div>`).join('')}</div>` : ''}`;
+    ${waiting.length ? `<div class="sec2"><span>まだ空のまま</span></div><div class="frs wait">${waiting.map(f => `<div class="fr wait"><span data-act="profile" data-id="${esc(f.id)}">${ava(f, 40)}</span><span class="fr-tx" data-act="profile" data-id="${esc(f.id)}"><b class="ellip">${esc(f.name)}</b><small>${f.last_post ? `最後の色 · ${rel(f.last_post.created_at)}` : 'まだ色がありません'}</small></span><button class="fr-gift" data-act="gift" data-id="${esc(f.id)}" aria-label="${esc(f.name)}に曲を贈る">${I.gift}</button></div>`).join('')}</div>` : ''}`;
   el.innerHTML = `
     <div class="hd"><div class="logo"><img src="/logo-mark.png" alt=""><span>hearme</span></div>
       <button class="icon-btn" data-act="add-friend" aria-label="フレンド追加">${I.userplus}</button></div>
@@ -360,7 +360,7 @@ function slideHTML(p) {
   const isFriend = S.friends.some(f => f.id === a.id);
   return `<section class="slide" data-post="${p.id}" style="--mc:${mo.c}">
     <div class="sl-bg"></div>
-    <div class="sl-top">${ava(a, 32)}<b class="ellip">${esc(a.name)}</b><span>${rel(p.created_at)}</span>
+    <div class="sl-top"><button class="sl-who" data-act="profile" data-id="${esc(a.id || '')}">${ava(a, 32)}<b class="ellip">${esc(a.name)}</b></button><span>${rel(p.created_at)}</span>
       <button class="icon-btn sl-more" data-act="post-menu" data-id="${p.id}" aria-label="メニュー">${I.more}</button></div>
     <div class="sl-art">${art(p)}
       <span class="listen-ring xl ${needListen ? '' : 'done'}" data-ring="${p.id}" style="--mc:${mo.c}">${playBtn(p) || ''}</span></div>
@@ -569,7 +569,7 @@ async function openChat(peerId) {
   S.chat = { peer, msgs: [], typingUntil: 0, typing: null, loadingOld: false, done: false };
   const pg = $('#pg-chat');
   pg.innerHTML = `<div class="ig-hd"><button class="back" data-act="close-page" aria-label="戻る">${I.back}</button>
-      <button class="ig-who" data-act="friend-menu" data-id="${esc(peer.id)}">${ava(peer, 34)}<span><b class="ellip">${esc(peer.name)}</b><small id="chat-sub">${esc(peer.bio || 'フレンド')}</small></span></button>
+      <button class="ig-who" data-act="profile" data-id="${esc(peer.id)}">${ava(peer, 34)}<span><b class="ellip">${esc(peer.name)}</b><small id="chat-sub">${esc(peer.bio || 'フレンド')}</small></span></button>
       <button class="icon-btn ig-gift" data-act="gift" data-id="${esc(peer.id)}" aria-label="曲を贈る">${I.gift.replace('width="15" height="15"', 'width="21" height="21"')}</button></div>
     <div class="chat ig" id="chat"><div style="margin:auto;padding:30px" class="faint"><div class="spin" style="margin:0 auto"></div></div></div>
     <div class="ig-bar"><div class="ig-pill">
@@ -656,9 +656,9 @@ async function chatSend(song) {
   } catch (e) { tmp._pending = false; tmp._failed = true; toast(errText(e)); }
   drawChat(true);
 }
-function openSongPicker(onPick) {
+function openSongPicker(onPick, title = '曲を送る') {
   const P = { q: '', res: [] };
-  openSheet(`<div style="padding:0 0 10px"><div class="disp" style="text-align:center;font-size:17px;margin-bottom:12px">曲を送る</div><div class="srch">${I.search}<input id="sp-q" placeholder="曲名・アーティスト名" enterkeyhint="search" autocomplete="off"></div><div id="sp-res" style="padding-top:6px;min-height:40vh"></div></div>`, { full: true });
+  openSheet(`<div style="padding:0 0 10px"><div class="disp" style="text-align:center;font-size:17px;margin-bottom:12px">${esc(title)}</div><div class="srch">${I.search}<input id="sp-q" placeholder="曲名・アーティスト名" enterkeyhint="search" autocomplete="off"></div><div id="sp-res" style="padding-top:6px;min-height:40vh"></div></div>`, { full: true });
   const q = $('#sp-q'); setTimeout(() => q.focus(), 350);
   let t, ctrl;
   q.oninput = () => {
@@ -684,39 +684,93 @@ function streak() {
   while (days.has(dayKey(d))) { n++; d.setDate(d.getDate() - 1); }
   return n;
 }
-function renderMe() {
-  const el = $('#t-me'); const p = S.profile || {};
-  const d0 = new Date(); const ym = d0.getFullYear() * 12 + d0.getMonth();
-  const month = S.mine.filter(x => { const t = new Date(x.created_at); return t.getFullYear() * 12 + t.getMonth() === ym; }).slice().reverse();
-  const cols = month.map(x => moodOf(x.mood).c);
-  const strip = cols.length ? (cols.length === 1 ? cols[0] : `linear-gradient(90deg, ${cols.map((c, i) => `${c} ${Math.round(i / (cols.length - 1) * 100)}%`).join(', ')})`) : 'var(--s2)';
-  const days = new Set(month.map(x => dayKey(x.created_at))).size;
+// ═══════════════════════ PROFILE（じぶん・フレンドのページ） ═══════════════════════
+function miniRainbow(data, w = 120) {
+  const moods = RAINBOW_ORDER.map(e => (data?.moods || []).find(m => m.e === e)).filter(Boolean);
+  const total = Math.max(1, data?.total || 1);
+  const R = w / 2 - 2, cy = R + 2, TH = Math.min(R * .62, w * .05 + w * .06 * (total - 1));
+  let r = R, paths = '';
+  moods.forEach(m => { const t = Math.max(w * .025, TH * m.n / total); const rr = r - t / 2; paths += `<path d="M${(w / 2 - rr).toFixed(1)} ${cy}A${rr.toFixed(1)} ${rr.toFixed(1)} 0 0 1 ${(w / 2 + rr).toFixed(1)} ${cy}" stroke="${MOOD_META[m.e]?.c || '#ccc'}" stroke-width="${t.toFixed(1)}" fill="none"/>`; r -= t; });
+  return `<svg viewBox="0 0 ${w} ${cy + 1}" width="100%" aria-hidden="true">${paths}</svg>`;
+}
+const mdLabel = d => { const x = new Date(d); return `${x.getMonth() + 1}/${x.getDate()}`; };
+function profileHTML(d, self) {
+  const posts = d.posts || [];
+  const last = posts[0]; const mc = last && isToday(last.created_at) ? moodOf(last.mood).c : 'var(--ln3)';
+  const fav = d.fav_songs || [];
+  const rbs = d.rainbows || [];
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const d2 = new Date(); const tk = `${d2.getFullYear()}-${pad(d2.getMonth() + 1)}-${pad(d2.getDate())}`;
+  const savedToday = rbs.some(r => String(r.day).slice(0, 10) === tk || String(r.day).slice(0, 10) === todayKey);
   const cal = [];
   for (let i = 13; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const ps = S.mine.filter(x => dayKey(x.created_at) === dayKey(d));
-    const c = ps.length ? moodOf(ps[0].mood).c : '';
-    cal.push(`<span class="cd ${i === 0 ? 'today' : ''}" ${c ? `style="--mc:${c}"` : ''}><i></i><small>${d.getDate()}</small></span>`);
+    const dd = new Date(); dd.setDate(dd.getDate() - i);
+    const p = posts.find(x => dayKey(x.created_at) === dayKey(dd));
+    cal.push(`<span class="cd ${i === 0 ? 'today' : ''}" ${p ? `style="--mc:${moodOf(p.mood).c}"` : ''}><i></i><small>${dd.getDate()}</small></span>`);
   }
+  const did = esc(d.id);
+  return `<div class="pf">
+    <div class="pf-top"><div class="pf-ava" style="--mc:${mc}">${ava(d, 86)}</div>
+      <div class="pf-stats"><div><b>${d.days ?? 0}</b><small>色の日</small></div><div><b>${rbs.length}</b><small>虹</small></div><div><b>${d.friends ?? 0}</b><small>フレンド</small></div></div></div>
+    <div class="pf-name">${esc(d.name || '')}</div>${d.bio ? `<div class="pf-bio">${esc(d.bio)}</div>` : ''}
+    ${!self && d.since ? `<div class="pf-since">${mdLabel(d.since)} からフレンド</div>` : ''}
+    <div class="pf-btns">${self
+      ? `<button class="pf-btn" data-act="settings">プロフィールを編集</button><button class="pf-btn" data-act="add-friend">コード・招待</button>`
+      : `<button class="pf-btn p" data-act="chat" data-id="${did}">メッセージ</button><button class="pf-btn" data-act="gift" data-id="${did}">曲を贈る</button><button class="pf-btn ic" data-act="friend-menu" data-id="${did}" aria-label="メニュー">${I.more}</button>`}</div>
+
+    <div class="pf-sec"><b>お気に入りの曲</b>${self && fav.length < 5 ? `<button data-act="fav-add">${I.plus.replace('<svg', '<svg width="14" height="14"')} 追加</button>` : ''}</div>
+    ${fav.length ? `<div class="favs">${fav.map((s, i) => `<div class="fav">${art(s, 0, playBtn(s))}<div class="fav-ti ellip">${esc(s.title)}</div><div class="fav-ar ellip">${esc(s.artist)}</div>${self ? `<button class="fav-x" data-act="fav-del" data-i="${i}" aria-label="外す">${I.x.replace('<svg', '<svg width="11" height="11"')}</button>` : ''}</div>`).join('')}</div>`
+      : `<div class="pf-empty">${self ? `<button data-act="fav-add">好きな曲を5曲まで飾れます</button>` : 'まだありません'}</div>`}
+
+    <div class="pf-sec"><b>虹コレクション</b>${self && !savedToday && S.rainbow?.moods?.length ? `<button data-act="rb-save">${I.plus.replace('<svg', '<svg width="14" height="14"')} 今日の虹を残す</button>` : ''}</div>
+    ${rbs.length ? `<div class="rbs">${rbs.map(r => `<button class="rbc" data-act="rb-open" data-id="${esc(r.id)}" data-u="${did}">${miniRainbow(r.data, 120)}<span>${mdLabel(r.day)}</span><small>${r.data?.total || 1}人</small></button>`).join('')}</div>`
+      : `<div class="pf-empty">${self ? '気に入った日の虹を、ここに残しておけます' : 'まだありません'}</div>`}
+
+    <div class="pf-sec"><b>最近の色</b></div>
+    <div class="card pf-cal"><div class="cal2">${cal.join('')}</div></div>
+
+    <div class="pf-sec"><b>${self ? 'あなたがたした曲' : '最近の曲'}</b></div>
+    ${posts.length ? `<div class="card list">${posts.slice(0, 30).map(x => { const mo = moodOf(x.mood); return `<div class="li tap" data-act="open-post" data-id="${x.id}">${art(x, 44)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(x.title)}</div><div class="ellip faint" style="font-size:12px;margin-top:2px">${esc(x.artist)}</div></div><div class="my-m"><span class="mchip sm" style="--mc:${mo.c}"><i></i>${esc(mo.label)}</span><small>${rel(x.created_at)}</small></div></div>`; }).join('')}</div>`
+      : `<div class="pf-empty">まだありません</div>`}
+  </div>`;
+}
+const PF = { cache: new Map() };
+function myPf() {
+  const base = S.myPf || {};
+  return { ...base, ...S.profile, id: api.uid, fav_songs: S.profile?.fav_songs || base.fav_songs || [], posts: S.mine, friends: S.friends.length,
+    days: new Set(S.mine.map(p => dayKey(p.created_at))).size, rainbows: base.rainbows || [] };
+}
+async function loadMyPf() { try { S.myPf = await api.friendProfile(api.uid); } catch { /* v10.sql 未適用など */ } if (S.tab === 'me') renderMe(); }
+function renderMe() {
+  const el = $('#t-me'); const p = S.profile || {};
   el.innerHTML = `
-    <div class="glow-top me-glow"></div>
-    <div class="hd"><h1>じぶん</h1><button class="icon-btn" data-act="settings" aria-label="設定">${I.gear}</button></div>
-    <div class="ph">${ava(p, 88)}<div class="nm">${esc(p.name)}</div>${p.bio ? `<div class="bio">${esc(p.bio)}</div>` : ''}</div>
-    <div class="mycode"><button class="code" data-act="copy-code" aria-label="コードをコピー"><small>あなたのコード</small>${esc(p.code || '------')}</button>
-      <div class="mycode-b"><button class="btn p" data-act="share-invite">${I.share} 招待する</button><button class="btn g" data-act="add-friend">コードで追加</button></div></div>
+    <div class="hd"><h1 class="ellip">${esc(p.name || 'じぶん')}</h1><button class="icon-btn" data-act="settings" aria-label="設定">${I.gear}</button></div>
     ${api.user()?.anonymous && S.mine.length ? `<button class="notice" data-act="settings"><b>メールを登録しておこう</b><small>機種変更やデータ削除で、色の記録が消えないように</small>${I.back.replace('<svg', '<svg style="transform:rotate(180deg)"')}</button>` : ''}
-    <div class="card mcol">
-      <div class="mcol-hd"><b>${d0.getMonth() + 1}月の色</b><span>${days ? `${days}日分のきもち` : 'まだ色がありません'}</span></div>
-      <div class="mcol-strip" style="background:${strip}"></div>
-      <div class="cal2">${cal.join('')}</div>
-      ${month.length >= 3 ? `<button class="mcol-go" data-act="recap">${I.spark} この月をふり返る</button>` : ''}
-    </div>
-    <div class="sec2"><span>フレンド ${S.friends.length}</span></div>
-    <div class="card list">${S.friends.length ? S.friends.map(f => `<div class="li">${ava(f, 40)}<div style="flex:1;min-width:0"><div class="ellip" style="font-weight:600;font-size:14px">${esc(f.name)}</div><div class="faint ellip" style="font-size:12px;margin-top:2px">${f.last_post ? `${esc(f.last_post.title)} · ${rel(f.last_post.created_at)}` : 'まだ色がありません'}</div></div><button class="icon-btn sm" data-act="chat" data-id="${esc(f.id)}" aria-label="メッセージ">${I.chat}</button><button class="icon-btn sm" data-act="friend-menu" data-id="${esc(f.id)}" aria-label="メニュー">${I.more}</button></div>`).join('') : `<div class="faint" style="font-size:13px;padding:6px 2px">まだいません。招待してみよう</div>`}</div>
-    <div class="sec2"><span>あなたがたした色</span></div>
-    ${S.mine.length ? `<div class="card list">${S.mine.map(x => { const mo = moodOf(x.mood); return `<div class="li tap" data-act="open-post" data-id="${x.id}">${art(x, 44)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(x.title)}</div><div class="ellip faint" style="font-size:12px;margin-top:2px">${esc(x.artist)}</div></div><div class="my-m"><span class="mchip sm" style="--mc:${mo.c}"><i></i>${esc(mo.label)}</span><small>${rel(x.created_at)}</small></div></div>`; }).join('')}</div>`
-      : `<div class="empty2"><b>まだ色がありません</b><p>今日の気分と1曲をたすと、ここにたまっていきます。</p></div>`}
+    ${profileHTML(myPf(), true)}
+    <div class="pf-sec"><b>フレンド ${S.friends.length}</b><button data-act="add-friend">${I.userplus.replace('<svg', '<svg width="15" height="15"')} 追加</button></div>
+    ${S.friends.length ? `<div class="pf-friends">${S.friends.map(f => `<button class="pf-f" data-act="profile" data-id="${esc(f.id)}">${ava(f, 58)}<span class="ellip">${esc(f.name)}</span></button>`).join('')}</div>` : `<div class="pf-empty"><button data-act="share-invite">招待リンクを送る</button></div>`}
     <div style="height:100px"></div>`;
+}
+async function openProfile(id) {
+  if (!id) return;
+  if (id === api.uid) { closeSheet(); setTab('me'); return; }
+  closeSheet();
+  const f = S.friends.find(x => x.id === id) || PF.cache.get(id);
+  const head = subHead(esc(f?.name || ''));
+  openSub(`${head}<div class="page-body" id="pf-body">${f ? profileHTML({ ...f, posts: [], rainbows: [], fav_songs: [] }, false).replace('<div class="pf">', '<div class="pf loading">') : '<div style="padding:40px"><div class="spin" style="margin:auto"></div></div>'}</div>`);
+  try {
+    const d = await api.friendProfile(id); PF.cache.set(id, d); remember(d.posts || []);
+    const b = $('#pf-body'); if (b && pageStack.includes('pg-sub')) b.innerHTML = profileHTML(d, false);
+  } catch (e) { const b = $('#pf-body'); if (b) b.insertAdjacentHTML('beforeend', `<div class="pf-empty">${esc(errText(e))}</div>`); }
+}
+function rainbowSheet(r, self) {
+  const moods = RAINBOW_ORDER.map(e => (r.data?.moods || []).find(m => m.e === e)).filter(Boolean);
+  openSheet(`<div style="padding:4px 22px 24px;text-align:center">
+    <div class="faint" style="font-size:12px;letter-spacing:.1em">${new Date(r.day).getFullYear()}年${mdLabel(r.day).replace('/', '月')}日の虹</div>
+    <div style="max-width:300px;margin:16px auto 14px">${miniRainbow(r.data, 300)}</div>
+    <div class="rb-legend" style="justify-content:center">${moods.map(m => `<span class="mchip" style="--mc:${MOOD_META[m.e].c}"><i></i>${MOOD_META[m.e].label} ${m.n}人</span>`).join('')}</div>
+    <div class="faint" style="font-size:12px;margin-top:12px">${r.data?.total || 1}人でつくった虹</div>
+    ${self ? `<button class="btn g w" style="margin-top:20px" data-act="rb-del" data-id="${esc(r.id)}">コレクションから外す</button>` : ''}</div>`);
 }
 
 // ═══════════════════════ COMPOSER（気分 → 曲 → たす） ═══════════════════════
@@ -1019,6 +1073,28 @@ function songBySrc(src) {
 const A = {
   tab: el => setTab(el.dataset.tab),
   listen: el => goListen(el.dataset.id),
+  profile: el => openProfile(el.dataset.id),
+  'fav-add': () => openSongPicker(async s => {
+    const fav = [...(S.profile?.fav_songs || [])];
+    if (fav.length >= 5) { toast('お気に入りは5曲までです'); return; }
+    if (fav.some(x => (x.track_id && x.track_id === s.track_id) || (x.title === s.title && x.artist === s.artist))) { toast('もう入っています'); return; }
+    fav.push({ title: s.title, artist: s.artist, artwork: s.artwork || null, preview_url: s.preview_url || null, track_url: s.track_url || null, track_id: s.track_id || null });
+    try { S.profile = await api.updateProfile({ fav_songs: fav }); buzz(8); toast('お気に入りに追加しました'); renderMe(); } catch (e) { toast(errText(e)); }
+  }, 'お気に入りの曲を追加'),
+  'fav-del': async el => {
+    const fav = [...(S.profile?.fav_songs || [])]; fav.splice(+el.dataset.i, 1);
+    try { S.profile = await api.updateProfile({ fav_songs: fav }); buzz(5); renderMe(); } catch (e) { toast(errText(e)); }
+  },
+  'rb-save': async () => {
+    try { await api.saveRainbow(); buzz([8, 30, 8]); toast('今日の虹をコレクションに残しました'); await loadMyPf(); } catch (e) { toast(errText(e)); }
+  },
+  'rb-open': el => {
+    const self = el.dataset.u === api.uid; const src = self ? myPf() : PF.cache.get(el.dataset.u);
+    const r = src?.rainbows?.find(x => String(x.id) === el.dataset.id); if (r) rainbowSheet(r, self);
+  },
+  'rb-del': async el => {
+    try { await api.deleteRainbow(el.dataset.id); closeSheet(); toast('外しました'); await loadMyPf(); } catch (e) { toast(errText(e)); }
+  },
   'inbox-tab': el => { S.inbox = el.dataset.k; buzz(4); renderInbox(); if (S.inbox === 'm') refreshThreads(); },
   'cmp-back': () => { if (C.song && C.mood) { C.mood = null; } else { C.mood = null; C.song = null; } C.ai.songs = []; C.ai.err = ''; buzz(4); renderComposer(); },
   compose: () => { hideMoment(); openComposer(); },
@@ -1033,7 +1109,7 @@ const A = {
   mood: el => { C.mood = el.dataset.m; buzz(6); renderComposer(); },
   pubtoggle: el => { C.pub = !C.pub; el.querySelector('.sw').classList.toggle('on', C.pub); buzz(5); },
   post: () => submitPost(),
-  'open-post': el => { const p = S.posts.get(el.dataset.id); if (p && !p.mine && S.friends.some(f => f.id === p.author?.id)) goListen(p.id); else openPost(el.dataset.id); },
+  'open-post': el => { const p = S.posts.get(el.dataset.id); if (p && !p.mine && listenQueue().some(x => x.id === p.id)) { if (pageStack.includes('pg-sub')) closePage('pg-sub'); goListen(p.id); } else openPost(el.dataset.id); },
   'post-menu': el => postMenu(el.dataset.id),
   react: async el => {
     const p = S.posts.get(el.dataset.id); if (!p) return;
@@ -1695,6 +1771,7 @@ async function refreshThreads() {
   badges(); if (S.tab === 'dm') renderDM();
 }
 async function refreshMe() {
+  loadMyPf();
   try { S.activity = await api.activity(); } catch { /* */ }
   badges(); if (S.tab === 'me') renderMe();
 }

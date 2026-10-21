@@ -21,6 +21,8 @@ const ERR = {
   AI_LIMIT: '今日のAI選曲は上限に達しました。また明日！',
   AI_BUSY: 'AIが混み合っています。少し待ってもう一度試してね',
   AI_ERROR: 'AIがうまく答えられませんでした。言い方を変えて試してね',
+  EMPTY_RAINBOW: 'まだ今日の虹に色がありません',
+  NOT_FOUND: '見つかりませんでした',
 };
 export function errText(e) {
   const m = String(e?.message || e || '');
@@ -155,6 +157,10 @@ class LiveAPI {
   async openGift(id) { return this._r(await this.sb.rpc('open_gift', { p_id: id })); }
   async markListened(postId) { return this._r(await this.sb.rpc('mark_listened', { p_post: postId })); }
   async todayRainbow() { return this._r(await this.sb.rpc('today_rainbow')); }
+  // v10：プロフィール
+  async friendProfile(id) { return this._r(await this.sb.rpc('friend_profile', { p_id: id })); }
+  async saveRainbow() { return this._r(await this.sb.rpc('save_rainbow')); }
+  async deleteRainbow(id) { return this._r(await this.sb.rpc('delete_rainbow', { p_id: id })); }
   async sameMood(mood) { return this._r(await this.sb.rpc('same_mood', { p_mood: mood })); }
   async postWhisper(text, mood, song) { return this._r(await this.sb.rpc('post_whisper', { p_text: text, p_mood: mood || '', p_song: song || null })); }
   async nightFeed() { return this._r(await this.sb.rpc('night_feed')) || []; }
@@ -379,6 +385,27 @@ class DemoAPI {
   async gifts() { return this._v8().gifts; }
   async openGift(id) { const g = this._v8().gifts.find(x => x.id === id); if (g) g.opened_at ||= now(); this.save(); }
   async markListened(postId) { const d = this._v8(); if (!d.listens.includes(postId)) { d.listens.push(postId); this.save(); } return { comment: this.db.posts.find(p => p.id === postId)?.comment ?? null }; }
+  async friendProfile(id) {
+    const p = this.person(id); if (!p) throw new Error('NOT_FOUND');
+    const posts = this.sorted(this.db.posts.filter(x => x.user_id === id)).map(x => this.postJSON(x, true));
+    this.db.rainbows ||= [];
+    const demoFav = { 'd-yuki': [['夜に駆ける', 'YOASOBI'], ['白日', 'King Gnu'], ['水平線', 'back number']], 'd-mio': [['Plastic Love', '竹内まりや'], ['マリーゴールド', 'あいみょん']] }[id];
+    const demoRb = id !== this.uid && !this.db.rainbows.some(r => r.user_id === id) ? [
+      { id: id + '-r1', day: new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10), data: { total: 3, moods: [{ e: '😊', n: 1 }, { e: '😌', n: 1 }, { e: '🥰', n: 1 }] } },
+      { id: id + '-r2', day: new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10), data: { total: 4, moods: [{ e: '🔥', n: 1 }, { e: '😢', n: 2 }, { e: '🥺', n: 1 }] } }] : [];
+    return { id: p.id, name: p.name, emoji: p.emoji, avatar: p.avatar, bio: p.bio || '',
+      fav_songs: p.fav_songs || (demoFav || []).map(([title, artist]) => ({ title, artist })),
+      friends: id === this.uid ? this.db.friends.length : 2, days: new Set(posts.map(x => x.created_at.slice(0, 10))).size, posts,
+      rainbows: [...this.db.rainbows.filter(r => r.user_id === id).sort((a, b) => b.day.localeCompare(a.day)), ...demoRb] };
+  }
+  async saveRainbow() {
+    const r = await this.todayRainbow(); if (!r.moods.length) throw new Error('EMPTY_RAINBOW');
+    const d = new Date(); const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    this.db.rainbows ||= []; this.db.rainbows = this.db.rainbows.filter(x => !(x.user_id === this.uid && x.day === day));
+    const row = { id: 'rb' + Date.now(), user_id: this.uid, day, data: { total: r.total, moods: r.moods.map(m => ({ e: m.e, n: m.n })) } };
+    this.db.rainbows.push(row); this.save(); return row;
+  }
+  async deleteRainbow(id) { this.db.rainbows = (this.db.rainbows || []).filter(r => r.id !== id); this.save(); }
   async todayRainbow() {
     const start = new Date(); start.setHours(0, 0, 0, 0);
     const ids = [this.uid, ...this.db.friends.map(f => f.id)];
