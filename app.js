@@ -7,7 +7,7 @@ import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 import * as CFG from './config.js';
 const AI_ON = CFG.AI_ENABLED !== false && CFG.AI_ENABLED !== undefined ? true : false;
 
-const VERSION = '10.4.0';
+const VERSION = '10.4.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -428,7 +428,8 @@ function renderInbox() {
   else if (!S.threads.length) body = `<div class="empty2"><b>メッセージはフレンドとだけ</b><p>招待コードを交換した相手とだけ話せます。知らない人からは届きません。</p></div>`;
   else body = S.threads.map(t => {
     const l = t.last; const un = +t.unread || 0;
-    const pv = !l ? 'ことばを送ってみよう' : (l.mine ? 'あなた: ' : '') + (l.song?.reaction ? `「${l.song.title}」にリアクション` : l.song && !l.body ? `曲：${l.song.title}` : l.body);
+    const st = l?.song && typeof l.song === 'object' ? l.song : null;
+    const pv = !l ? 'ことばを送ってみよう' : (l.mine ? 'あなた: ' : '') + (st?.reaction ? `「${st.title}」にリアクション` : l.song && !l.body ? (st?.title ? `曲：${st.title}` : '曲を送りました') : l.body);
     return `<div class="th" data-act="chat" data-id="${esc(t.peer.id)}">${ava(t.peer, 50)}<div class="info"><div class="nm ellip">${esc(t.peer.name)}</div><div class="pv ellip ${un ? 'un' : ''}">${esc(pv)}</div></div><div class="rt">${l ? `<div class="tm">${rel(l.created_at)}</div>` : ''}${un ? `<div class="cnt">${un}</div>` : ''}</div></div>`;
   }).join('');
   const nUn = notifs.filter(n => !n.read_at).length, mUn = S.threads.reduce((a, t) => a + (+t.unread || 0), 0);
@@ -1374,7 +1375,7 @@ music.player.subscribe(st => {
     $$(`.post[data-post="${p.id}"]`).forEach(card => { const tmp = document.createElement('div'); tmp.innerHTML = postCard(p); const n = tmp.firstElementChild; n.classList.add('unlocked'); card.replaceWith(n); });
     badges(); if (S.tab === 'home') renderHome();
     if (p.comment) buzz([8, 30, 8]);
-  }).catch(() => { V8.listened.delete(p.id); });
+  }).catch(() => { setTimeout(() => V8.listened.delete(p.id), 1500); });   // 再生を止めていても、少し待ってまた試す
 });
 
 // ④ 今日の虹
@@ -1399,7 +1400,9 @@ function rainbowHTML() {
   const sub = people <= 1 ? (meE ? '友達の色が重なると、虹が太くなります' : '気分をえらぶと、あなたの色で虹が始まります')
     : R.waiting ? `あと${R.waiting}人がまだ空のまま` : 'みんなの色がそろいました';
   const tk = (() => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; })();
-  const savedToday = (S.myPf?.rainbows || []).some(r => String(r.day).slice(0, 10) === tk);
+  const savedRb = (S.myPf?.rainbows || []).find(r => String(r.day).slice(0, 10) === tk);
+  const savedN = savedRb ? (savedRb.data?.moods || []).reduce((a, m) => a + (m.n || 0), 0) : 0;
+  const savedToday = !!savedRb && savedN >= posted && (savedRb.data?.total || 0) >= people;   // 色が増えたら、残し直せる
   const pm = pick && moods.find(m => m.e === pick);
   return `<div class="rb-wrap">
     <div class="lbl" style="letter-spacing:.12em">今日の虹</div>
@@ -1412,7 +1415,7 @@ function rainbowHTML() {
     </div>
     <div class="rb-legend">${moods.map(m => `<button class="mchip ${pick === m.e ? 'on' : ''}" style="--mc:${MOOD_META[m.e].c}" data-act="rb-pick" data-e="${m.e}"><i></i>${MOOD_META[m.e].label} ${m.n}${m.n > 1 || people > 1 ? '人' : ''}</button>`).join('')}
       ${!meE ? `<button class="mchip add" data-act="compose">${I.plus.replace('<svg', '<svg width="12" height="12"')} あなたの色をたす</button>` : ''}
-      ${posted && !savedToday ? `<button class="rb-keep" data-act="rb-save">${I.plus.replace('<svg', '<svg width="12" height="12"')} 今日の虹を残す</button>` : posted && savedToday ? `<span class="rb-kept">${I.check} 残しました</span>` : ''}</div>
+      ${posted && !savedToday ? `<button class="rb-keep" data-act="rb-save">${I.plus.replace('<svg', '<svg width="12" height="12"')} ${savedRb ? `いまの虹で残し直す（${posted}色）` : '今日の虹を残す'}</button>` : posted && savedToday ? `<span class="rb-kept">${I.check} 残しました</span>` : ''}</div>
     <div class="rb-hint">色は気分、太さは集まった人の数</div>
     ${pm ? `<div class="rb-pick" style="--mc:${MOOD_META[pm.e].c}"><b>${MOOD_META[pm.e].label}</b>　${pm.names.map(esc).join('・')}
       ${moodOf(pm.e + ' x').label && ['😢', '🥺', '😤'].includes(pm.e) ? `<div class="rb-gifts">${pm.ids.filter(id => S.friends.some(f => f.id === id)).map(id => { const f = S.friends.find(x => x.id === id); return `<button class="gift-btn" style="--mc:${MOOD_META[pm.e].c}" data-act="gift" data-id="${esc(id)}">${I.gift} ${esc(f.name)}に贈る</button>`; }).join('')}</div>` : ''}</div>` : ''}
