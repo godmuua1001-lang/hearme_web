@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '10.2.1';
+const VERSION = '10.2.2';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -466,7 +466,7 @@ function searchDebounced() {
     C.ctrl?.abort(); C.ctrl = new AbortController();
     $('#cmp-spin') && ($('#cmp-spin').className = 'spin');
     try { C.results = await music.search(q, { signal: C.ctrl.signal }); refreshResults(); if (!C.results.length) $('#cmp-res').innerHTML = `<div class="faint" style="padding:18px;font-size:13px;text-align:center">「${esc(q)}」は見つかりませんでした</div>`; }
-    catch (e) { if (e.name !== 'AbortError') toast('検索できませんでした'); }
+    catch (e) { if (e.name !== 'AbortError' && !C.ctrl.signal.aborted) { toast('検索できませんでした。電波を確認して、もう一度ためしてね'); console.warn('search', e); } }
     $('#cmp-spin') && ($('#cmp-spin').className = '');
   }, 320);
 }
@@ -801,8 +801,8 @@ function renderComposer() {
   else if (step === 2) body = `${head('その気分の1曲', '戻る', 'cmp-back')}
     <button class="cmp-mood" data-act="cmp-back" style="--mc:${mo.c}"><i></i>${esc(mo.label)}<small>変える</small></button>
     <div class="ai-box">
-      <div class="ai-hd">${I.spark}<b>AIにえらんでもらう</b></div>
-      <div class="row" style="gap:8px"><input class="inp" id="ai-q" maxlength="100" placeholder="ひとこと足すと、もっと合う（なくてOK）" value="${esc(C.ai.q)}" enterkeyhint="go" autocomplete="off"><button class="btn p ai-btn" data-act="ai-go" ${C.ai.loading ? 'disabled' : ''}>${C.ai.loading ? '<span class="spin"></span>' : 'えらぶ'}</button></div>
+      <div class="ai-hd">${I.spark}<b>この気分に合う3曲</b><small>AI</small></div>
+      <div class="row" style="gap:8px"><input class="inp" id="ai-q" maxlength="100" placeholder="例：雨の帰り道" value="${esc(C.ai.q)}" enterkeyhint="go" autocomplete="off"><button class="btn p ai-btn" data-act="ai-go" ${C.ai.loading ? 'disabled' : ''}>${C.ai.loading ? '<span class="spin"></span>' : 'えらび直す'}</button></div>
       <div id="ai-res">${aiResults()}</div>
       <div class="ai-note">気分の言葉は選曲のためAI（${LIVE ? 'Google Gemini' : 'デモ'}）に送られます。名前など個人が分かることは書かないでね</div></div>
     <div class="or">または自分で探す</div>
@@ -846,12 +846,12 @@ async function askAI() {
     remember2(C.ai.songs);
     if (!C.ai.songs.length) C.ai.err = 'ぴったりの曲が見つかりませんでした。ひとこと足して、もう一度ためしてね';
     buzz(8);
-  } catch (e) { C.ai.err = errText(e); }
+  } catch (e) { C.ai.err = errText(e) + (e?.message && !/^[A-Z_]+$/.test(e.message) ? '' : `（${e?.message || ''}）`); console.warn('ai', e); }
   C.ai.loading = false; renderAI();
 }
 function renderAI() {
   const r = $('#ai-res'); if (r) r.innerHTML = aiResults();
-  const b = $('.ai-btn'); if (b) { b.disabled = C.ai.loading; b.innerHTML = C.ai.loading ? '<span class="spin"></span>' : 'えらぶ'; }
+  const b = $('.ai-btn'); if (b) { b.disabled = C.ai.loading; b.innerHTML = C.ai.loading ? '<span class="spin"></span>' : 'えらび直す'; }
 }
 
 // ═══════════════════════ SETTINGS ═══════════════════════
@@ -1124,7 +1124,7 @@ const A = {
   'ai-go': () => askAI(),
   'ai-pick': el => { C.song = C.ai.songs[+el.dataset.i]; buzz(6); renderComposer(); },
   unpick: () => { C.song = null; renderComposer(); },
-  mood: el => { C.mood = el.dataset.m; buzz(6); renderComposer(); },
+  mood: el => { C.mood = el.dataset.m; C.ai.songs = []; C.ai.err = ''; buzz(6); renderComposer(); askAI(); },   // 気分をえらんだら、すぐAIが3曲さがす
   pubtoggle: el => { C.pub = !C.pub; el.querySelector('.sw').classList.toggle('on', C.pub); buzz(5); },
   post: () => submitPost(),
   'open-post': el => { const p = S.posts.get(el.dataset.id); if (p && !p.mine && listenQueue().some(x => x.id === p.id)) { ['pg-prof', 'pg-sub'].forEach(id => { if (pageStack.includes(id)) closePage(id); }); goListen(p.id); } else openPost(el.dataset.id); },

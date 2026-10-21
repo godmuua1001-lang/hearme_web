@@ -146,6 +146,8 @@ class LiveAPI {
     }));
     const seen = new Set(); const songs = [];
     for (const s of found) { if (!s) continue; const k = norm(s.artist); if (seen.has(k)) continue; seen.add(k); songs.push(s); if (songs.length === 3) break; }
+    // 試聴が見つからなくても、AIの候補はそのまま見せる（あとで探せる）
+    for (const i of data?.ideas || []) { if (songs.length >= 3) break; const k = norm(i.artist); if (seen.has(k)) continue; seen.add(k); songs.push({ title: i.title, artist: i.artist, reason: i.reason, artwork: null, preview_url: null, track_url: null }); }
     return { songs, left: data?.left, provider: data?.provider };
   }
 

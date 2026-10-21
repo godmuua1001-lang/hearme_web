@@ -7,18 +7,20 @@ const cache = new Map();
 let viaProxy = /iP(hone|ad|od)/.test(navigator.userAgent) || sessionStorage.getItem('hm_it_proxy') === '1';
 async function itunes(type, params, signal) {
   const qs = new URLSearchParams(params).toString();
-  const proxied = () => fetch(`/api/itunes?type=${type}&${qs}`, { signal }).then(r => r.json());
-  if (viaProxy) return proxied();
-  try {
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
+  const asJSON = async r => { if (!r.ok && r.status !== 502) throw new Error('status ' + r.status); const t = await r.text(); return JSON.parse(t); };
+  const proxied = () => fetch(`/api/itunes?type=${type}&${qs}`, { signal }).then(asJSON);
+  const direct = () => {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
     signal?.addEventListener('abort', () => ctl.abort());
-    const r = await fetch(`${IT}/${type}?${qs}`, { signal: ctl.signal }); clearTimeout(t);
-    if (!r.ok) throw new Error('status ' + r.status);
-    return await r.json();
-  } catch (e) {
+    return fetch(`${IT}/${type}?${qs}`, { signal: ctl.signal }).then(asJSON).finally(() => clearTimeout(t));
+  };
+  // 片方がだめなら、もう片方で試す（iPhoneは中継が先、それ以外は直接が先）
+  const [first, second] = viaProxy ? [proxied, direct] : [direct, proxied];
+  try { return await first(); }
+  catch (e) {
     if (signal?.aborted) throw e;
-    viaProxy = true; try { sessionStorage.setItem('hm_it_proxy', '1'); } catch { /* */ }
-    return proxied();
+    try { const d = await second(); if (!viaProxy) { viaProxy = true; try { sessionStorage.setItem('hm_it_proxy', '1'); } catch { /* */ } } return d; }
+    catch (e2) { if (signal?.aborted) throw e2; throw new Error('ITUNES_FAILED'); }
   }
 }
 
