@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '10.1.0';
+const VERSION = '10.1.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -197,7 +197,7 @@ const pageStack = [];
 function openPage(id) {
   const pg = $('#' + id); pg.classList.add('on'); pg.style.transform = '';
   if (!pageStack.includes(id)) pageStack.push(id);
-  history.pushState({ page: id }, '');
+  history.pushState({ hm: 'page', id }, '');
 }
 function closePage(id = pageStack[pageStack.length - 1], fromPop = false) {
   if (!id) return;
@@ -206,15 +206,24 @@ function closePage(id = pageStack[pageStack.length - 1], fromPop = false) {
   if (id === 'pg-chat') leaveChat();
   if (!fromPop) history.back();
 }
-addEventListener('popstate', () => {
-  if ($('#sheet').classList.contains('on')) { closeSheet(); return; }
-  if (pageStack.length) closePage(undefined, true);
+// 戻る操作（iPhoneのスワイプ・Androidの戻るボタン）：アプリの外に出たり、再読み込みでホームに戻ったりしないようにする
+addEventListener('popstate', e => {
+  const atBase = e.state?.hm === 'base';
+  if ($('#sheet').classList.contains('on')) {
+    closeSheet();
+    // シートは履歴を積んでいないので、いま消えた分を積み直す
+    if (pageStack.length) history.pushState({ hm: 'page', id: pageStack[pageStack.length - 1] }, '');
+    else if (atBase) history.pushState({ hm: 'app' }, '');
+    return;
+  }
+  if (pageStack.length) { closePage(undefined, true); if (atBase) history.pushState({ hm: 'app' }, ''); return; }
+  if (atBase) history.pushState({ hm: 'app' }, '');   // これ以上戻らない（アプリに留まる）
 });
 (() => {
   let x0 = null, dx = 0, pg = null;
   document.addEventListener('touchstart', e => {
     const t = e.touches[0]; pg = e.target.closest('.page.on');
-    if (pg && t.clientX < 28) { x0 = t.clientX; dx = 0; pg.style.transition = 'none'; } else x0 = null;
+    if (pg && standalone && t.clientX < 28) { x0 = t.clientX; dx = 0; pg.style.transition = 'none'; } else x0 = null;
   }, { passive: true });
   document.addEventListener('touchmove', e => {
     if (x0 == null) return; dx = Math.max(0, e.touches[0].clientX - x0);
@@ -232,6 +241,7 @@ addEventListener('popstate', () => {
 function setTab(t) {
   if (S.tab === t) { $('#t-' + t).scrollTo({ top: 0, behavior: 'smooth' }); return; }
   S.tab = t; buzz(5); document.body.dataset.tab = t;
+  try { sessionStorage.setItem('hm_tab', t); } catch { /* */ }
   $$('.tab').forEach(x => x.classList.toggle('on', x.id === 't-' + t));
   $$('.nb').forEach(x => x.classList.toggle('on', x.dataset.tab === t));
   if (t === 'dm') { refreshThreads(); loadNotifs(); }
@@ -1869,8 +1879,10 @@ async function startApp() {
   loadV8();
   // 招待リンク（すでに登録済みの人）
   const inv = pendingInvite(); if (inv) { sessionStorage.removeItem('hm_inv'); await addByCode(inv); }
+  { let lt = ''; try { lt = sessionStorage.getItem('hm_tab') || ''; } catch { /* */ }
+    if (!location.search && ['listen', 'dm', 'me'].includes(lt)) setTab(lt); }   // 再読み込みしても、さっきのタブのまま
   handleDeepLink(new URLSearchParams(location.search));
-  history.replaceState({}, '', '/');
+  history.replaceState({ hm: 'base' }, '', '/'); history.pushState({ hm: 'app' }, '');
   if (!LIVE) enrichDemo();
   // 戻ってきたら更新
   document.addEventListener('visibilitychange', () => {
