@@ -4,8 +4,10 @@
 import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
+import * as CFG from './config.js';
+const AI_ON = CFG.AI_ENABLED !== false && CFG.AI_ENABLED !== undefined ? true : false;
 
-const VERSION = '10.3.1';
+const VERSION = '10.3.2';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -462,7 +464,7 @@ let sT;
 function searchDebounced() {
   clearTimeout(sT);
   sT = setTimeout(async () => {
-    const q = C.q.trim(); if (!q) { C.results = []; refreshResults(); return; }
+    const q = C.q.trim(); if (!q) { C.results = []; const r = $('#cmp-res'); if (r) r.innerHTML = chartPicks(); return; }
     C.ctrl?.abort(); C.ctrl = new AbortController();
     $('#cmp-spin') && ($('#cmp-spin').className = 'spin');
     try { C.results = await music.search(q, { signal: C.ctrl.signal }); refreshResults(); if (!C.results.length) $('#cmp-res').innerHTML = `<div class="faint" style="padding:18px;font-size:13px;text-align:center">「${esc(q)}」は見つかりませんでした</div>`; }
@@ -804,14 +806,15 @@ function renderComposer() {
     <div class="moodgrid">${RAINBOW_ORDER.map(e => { const l = MOODS.find(([x]) => x === e)[1]; const o = MOOD_META[e]; return `<button class="mg" style="--mc:${o.c}" data-act="mood" data-m="${e} ${l}"><i></i><b>${o.label}</b><small>${esc(o.name || '')}</small></button>`; }).join('')}</div>`;
   else if (step === 2) body = `${head('その気分の1曲', '戻る', 'cmp-back')}
     <button class="cmp-mood" data-act="cmp-back" style="--mc:${mo.c}"><i></i>${esc(mo.label)}<small>変える</small></button>
-    <div class="ai-box">
+    ${AI_ON ? `    <div class="ai-box">
       <div class="ai-hd">${I.spark}<b>この気分に合う3曲</b><small>AI</small></div>
       <div class="row" style="gap:8px"><input class="inp" id="ai-q" maxlength="100" placeholder="例：雨の帰り道" value="${esc(C.ai.q)}" enterkeyhint="go" autocomplete="off"><button class="btn p ai-btn" data-act="ai-go" ${C.ai.loading ? 'disabled' : ''}>${C.ai.loading ? '<span class="spin"></span>' : 'えらび直す'}</button></div>
       <div id="ai-res">${aiResults()}</div>
       <div class="ai-note">この3曲は人ではなくAI（${LIVE ? 'Anthropic Claude' : 'デモ'}）が選んでいます。気分の名前と書き足したひとことが送られます。名前など個人が分かることは書かないでね</div></div>
-    <div class="or">または自分で探す</div>
+    <div class="or">または自分で探す</div>` : ''}
+
     <div class="srch">${I.search}<input id="cmp-q" placeholder="曲名・アーティスト名" value="${esc(C.q)}" enterkeyhint="search" autocomplete="off"><span id="cmp-spin"></span></div>
-    <div id="cmp-res" style="padding-top:6px">${C.results.map((s, i) => resRow(s, i)).join('')}</div>`;
+    <div id="cmp-res" style="padding-top:6px">${C.results.length ? C.results.map((s, i) => resRow(s, i)).join('') : chartPicks()}</div>`;
   else body = `${head('虹にたす', '戻る', 'unpick')}
     <div class="cmp-final" style="--mc:${mo.c}">
       <div class="cf-art">${art(C.song)}${playBtn(C.song)}</div>
@@ -826,6 +829,12 @@ function renderComposer() {
   if (aq) { aq.oninput = () => { C.ai.q = aq.value; }; aq.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); askAI(); } }; }
   const c = $('#cmp-c'); if (c) c.oninput = () => { C.comment = c.value; $('#cmp-n').textContent = `${c.value.length}/60`; };
   tintComposer();
+}
+// 検索欄が空のときは「いま聴かれている曲」から選べる
+function chartPicks() {
+  if (!S.loaded.chart) { loadChart().then(() => { if (!C.q && $('#cmp-res') && !C.results.length) $('#cmp-res').innerHTML = chartPicks(); }); return '<div class="faint" style="padding:18px;font-size:13px;text-align:center">いま頭の中で流れている曲は？</div>'; }
+  if (!S.chart.length) return '<div class="faint" style="padding:18px;font-size:13px;text-align:center">いま頭の中で流れている曲は？</div>';
+  return `<div class="faint" style="font-size:12px;padding:12px 4px 4px">いま日本で聴かれている曲</div>${S.chart.slice(0, 15).map((s, i) => `<div class="res" data-act="pick-chart" data-i="${i}">${art(s)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(s.artist)}</div></div>${playBtn(s, 'dim')}</div>`).join('')}`;
 }
 const resRow = (s, i) => `<div class="res" data-act="pick" data-i="${i}">${art(s)}<div style="flex:1;min-width:0"><div class="ellip" style="font-size:14px;font-weight:500">${esc(s.title)}</div><div class="ellip muted" style="font-size:12px;margin-top:2px">${esc(s.artist)}</div></div>${playBtn(s, 'dim')}</div>`;
 function aiResults() {
@@ -1126,10 +1135,11 @@ const A = {
   play: el => { const s = (el.dataset.post && S.posts.get(el.dataset.post)) || songBySrc(el.dataset.src); if (s) { buzz(5); music.player.toggle(s); } },
   stop: () => music.player.stop(),
   pick: el => { C.song = C.results[+el.dataset.i]; buzz(6); renderComposer(); },
+  'pick-chart': el => { C.song = S.chart[+el.dataset.i]; buzz(6); renderComposer(); },
   'ai-go': () => askAI(),
   'ai-pick': el => { C.song = C.ai.songs[+el.dataset.i]; buzz(6); renderComposer(); },
   unpick: () => { C.song = null; renderComposer(); },
-  mood: el => { C.mood = el.dataset.m; C.ai.songs = []; C.ai.err = ''; buzz(6); renderComposer(); askAI(); },   // 気分をえらんだら、すぐAIが3曲さがす
+  mood: el => { C.mood = el.dataset.m; C.ai.songs = []; C.ai.err = ''; buzz(6); renderComposer(); if (AI_ON) askAI(); else setTimeout(() => $('#cmp-q')?.focus(), 300); },   // 気分をえらんだら、すぐAIが3曲さがす
   pubtoggle: el => { C.pub = !C.pub; el.querySelector('.sw').classList.toggle('on', C.pub); buzz(5); },
   post: () => submitPost(),
   'open-post': el => { const p = S.posts.get(el.dataset.id); if (p && !p.mine && listenQueue().some(x => x.id === p.id)) { ['pg-prof', 'pg-sub'].forEach(id => { if (pageStack.includes(id)) closePage(id); }); goListen(p.id); } else openPost(el.dataset.id); },

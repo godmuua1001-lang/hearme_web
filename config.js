@@ -12,3 +12,6 @@ export const VAPID_PUBLIC_KEY = 'BAWebhyt24AmDSzHo2PNMVp5G4QjeeYklBCLuZvtUdfGiSX
 
 // Googleログインを有効にしたら true に
 export const GOOGLE_LOGIN = false;
+
+// AI選曲（いまは停止中。再開するときは true にして、Edge Function の設定も確認）
+export const AI_ENABLED = false;
