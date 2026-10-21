@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '10.0.1';
+const VERSION = '10.1.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -21,8 +21,18 @@ try { localStorage.removeItem('hm_ui'); } catch { /* */ }
 // キーボードが出たら、下から出る画面をキーボードの上に持ち上げる
 if (window.visualViewport) {
   const vv = visualViewport;
-  const kb = () => { const h = Math.max(0, innerHeight - vv.height - vv.offsetTop); document.documentElement.style.setProperty('--kb', (h > 80 ? h : 0) + 'px'); };
+  const kb = () => {
+    const h = Math.max(0, innerHeight - vv.height - vv.offsetTop); const open = h > 80;
+    const r = document.documentElement.style;
+    r.setProperty('--kb', (open ? h : 0) + 'px');
+    // DM画面は「見えている範囲」にぴったり合わせる（入力欄が必ずキーボードの真上に来る）
+    r.setProperty('--vvh', vv.height + 'px'); r.setProperty('--vvt', vv.offsetTop + 'px');
+    document.body.classList.toggle('kb-open', open);
+    const box = document.getElementById('chat');
+    if (box && document.body.classList.contains('chat-open')) requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
+  };
   vv.addEventListener('resize', kb); vv.addEventListener('scroll', kb);
+  kb();
 }
 // 開いた日数（インストール案内を2日目から出すため）
 const launchDays = (() => { let n = 1; try { const t = new Date().toDateString(); const d = JSON.parse(localStorage.getItem('hm_days') || '[]'); if (!d.includes(t)) d.push(t); localStorage.setItem('hm_days', JSON.stringify(d.slice(-3))); n = d.length; } catch { /* */ } return () => n; })();
@@ -548,15 +558,20 @@ async function openChat(peerId) {
   if (!peer) { toast('フレンドではない相手とはDMできません'); return; }
   S.chat = { peer, msgs: [], typingUntil: 0, typing: null, loadingOld: false, done: false };
   const pg = $('#pg-chat');
-  pg.innerHTML = `<div class="page-hd"><button class="back" data-act="close-page">${I.back}</button>${ava(peer, 36)}<div class="ttl"><div style="font-weight:600;font-size:15px" class="ellip">${esc(peer.name)}</div><div class="faint" style="font-size:11px" id="chat-sub">フレンド</div></div><button class="icon-btn" style="background:none;border:none" data-act="friend-menu" data-id="${esc(peer.id)}">${I.more}</button></div>
-    <div class="chat" id="chat"><div style="margin:auto;padding:30px" class="faint"><div class="spin" style="margin:0 auto"></div></div></div>
-    <div class="composer"><button class="icon-btn" data-act="chat-song" aria-label="曲を送る">${I.note.replace('width="22" height="22"', 'width="19" height="19"')}</button><textarea id="chat-in" rows="1" placeholder="メッセージ" maxlength="1000" enterkeyhint="send"></textarea><button class="send" data-act="chat-send" id="chat-send" disabled aria-label="送信">${I.send}</button></div>`;
+  pg.innerHTML = `<div class="ig-hd"><button class="back" data-act="close-page" aria-label="戻る">${I.back}</button>
+      <button class="ig-who" data-act="friend-menu" data-id="${esc(peer.id)}">${ava(peer, 34)}<span><b class="ellip">${esc(peer.name)}</b><small id="chat-sub">${esc(peer.bio || 'フレンド')}</small></span></button>
+      <button class="icon-btn ig-gift" data-act="gift" data-id="${esc(peer.id)}" aria-label="曲を贈る">${I.gift.replace('width="15" height="15"', 'width="21" height="21"')}</button></div>
+    <div class="chat ig" id="chat"><div style="margin:auto;padding:30px" class="faint"><div class="spin" style="margin:0 auto"></div></div></div>
+    <div class="ig-bar"><div class="ig-pill">
+      <button class="ig-song" data-act="chat-song" aria-label="曲を送る"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
+      <textarea id="chat-in" rows="1" placeholder="メッセージを入力…" maxlength="1000" enterkeyhint="send" autocomplete="off"></textarea>
+      <button class="ig-send" data-act="chat-send" id="chat-send" disabled>送信</button></div></div>`;
   openPage('pg-chat'); document.body.classList.add('chat-open');
   const inp = $('#chat-in');
   let lastPing = 0;
   inp.oninput = () => {
     inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
-    $('#chat-send').disabled = !inp.value.trim();
+    const has = !!inp.value.trim(); $('#chat-send').disabled = !has; $('.ig-pill')?.classList.toggle('typing', has);
     if (Date.now() - lastPing > 2500 && inp.value) { lastPing = Date.now(); S.chat?.typing?.ping(); }
   };
   inp.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !isIOS) { e.preventDefault(); chatSend(); } };
@@ -581,23 +596,32 @@ async function loadOlder() {
   } catch { /* */ }
   c.loadingOld = false;
 }
-function msgHTML(m, me) {
+function msgHTML(m, me, pos = 'single', showAva = false) {
   const mine = m.sender === me;
   const s = m.song;
-  if (s?.reaction) return `<div class="rxmsg">${mine ? 'あなた' : esc(S.chat.peer.name)}が${mine ? '' : 'あなたの'}「${esc(s.title)}」に ${esc(s.reaction)}</div>`;
-  const card = s ? `<div class="mcard">${art(s, 0, playBtn(s))}<div class="mi"><div class="ti ellip">${esc(s.title)}</div><div class="ar ellip">${esc(s.artist)}</div>${s.reply_to ? '<div class="faint" style="font-size:11px;margin-top:3px">↩︎ 投稿への返信</div>' : ''}</div>${m.body ? `<div class="bub">${esc(m.body)}</div>` : ''}</div>` : '';
-  return `<div class="msg ${mine ? 'me' : 'them'} ${m._pending ? 'pending' : ''} ${m._failed ? 'failed' : ''}" data-mid="${m.id}">${card || `<div class="bub">${esc(m.body)}</div>`}<div class="st">${m._failed ? '送信失敗・タップで再送' : hm(m.created_at)}</div></div>`;
+  if (s?.reaction) return `<div class="rxmsg">${mine ? 'あなたが' : esc(S.chat.peer.name) + 'が'}「${esc(s.title)}」に${esc(RX_META[s.reaction]?.l ? `「${RX_META[s.reaction].l}」` : 'リアクション')}</div>`;
+  const card = s ? `<div class="mcard">${art(s, 0, playBtn(s))}<div class="mi"><div class="ti ellip">${esc(s.title)}</div><div class="ar ellip">${esc(s.artist)}</div>${s.reply_to ? '<div class="faint" style="font-size:11px;margin-top:3px">投稿への返信</div>' : ''}</div></div>${m.body ? `<div class="bub">${esc(m.body)}</div>` : ''}` : `<div class="bub">${esc(m.body)}</div>`;
+  return `<div class="msg ${mine ? 'me' : 'them'} g-${pos} ${m._pending ? 'pending' : ''} ${m._failed ? 'failed' : ''}" data-mid="${m.id}">
+    ${mine ? '' : `<span class="m-ava">${showAva ? ava(S.chat.peer, 28) : ''}</span>`}<div class="m-col">${card}${m._failed ? '<div class="st">送信できませんでした・タップで再送</div>' : ''}</div></div>`;
 }
 function drawChat(toBottom) {
   const c = S.chat; if (!c) return; const box = $('#chat'); const me = api.uid;
   const near = toBottom || box.scrollHeight - box.scrollTop - box.clientHeight < 120;
-  if (!c.msgs.length) { box.innerHTML = `<div class="empty" style="margin:auto"><span class="e-ic">👋</span><b>${esc(c.peer.name)}とのDM</b>メッセージや曲を送ってみよう</div>`; return; }
-  let html = '', lastDay = '';
-  const lastRead = [...c.msgs].reverse().find(m => m.sender === me && m.read_at);
-  c.msgs.forEach(m => {
-    const d = dayKey(m.created_at); if (d !== lastDay) { html += `<div class="day">${dayLabel(m.created_at)}</div>`; lastDay = d; }
-    html += msgHTML(m, me);
-    if (lastRead && m.id === lastRead.id) html = html.replace(/<div class="st">([^<]*)<\/div><\/div>$/, `<div class="st">既読 · $1</div></div>`);
+  if (!c.msgs.length) { box.innerHTML = `<div class="ig-empty">${ava(c.peer, 84)}<b>${esc(c.peer.name)}</b><small>hearme のフレンド</small><p>ことばや曲を送ってみよう</p></div>`; return; }
+  let html = '', lastT = 0;
+  const lastMine = [...c.msgs].reverse().find(m => m.sender === me && !m.song?.reaction);
+  const ms = c.msgs;
+  ms.forEach((m, i) => {
+    const t = new Date(m.created_at).getTime();
+    // 15分以上あいたら時刻を真ん中に（インスタと同じ）
+    if (!lastT || t - lastT > 15 * 60000) html += `<div class="day">${isToday(m.created_at) ? hm(m.created_at) : `${dayLabel(m.created_at)} ${hm(m.created_at)}`}</div>`;
+    const prev = ms[i - 1], next = ms[i + 1];
+    const tp = prev && prev.sender === m.sender && !prev.song?.reaction && t - new Date(prev.created_at).getTime() < 15 * 60000;
+    const tn = next && next.sender === m.sender && !next.song?.reaction && new Date(next.created_at).getTime() - t < 15 * 60000;
+    const pos = tp && tn ? 'mid' : tp ? 'last' : tn ? 'first' : 'single';
+    html += msgHTML(m, me, pos, !tn);
+    if (lastMine && m.id === lastMine.id && m.sender === me) html += `<div class="seen">${m._pending ? '送信中…' : m.read_at ? `既読 ${hm(m.read_at)}` : '送信済み'}</div>`;
+    lastT = t;
   });
   html += `<div id="typing-slot"></div>`;
   box.innerHTML = html; drawTyping();
@@ -605,15 +629,15 @@ function drawChat(toBottom) {
 }
 function drawTyping() {
   const c = S.chat; if (!c) return; const on = Date.now() < c.typingUntil;
-  const slot = $('#typing-slot'); if (slot) slot.innerHTML = on ? '<div class="typing"><i></i><i></i><i></i></div>' : '';
-  const sub = $('#chat-sub'); if (sub) sub.textContent = on ? '入力中…' : 'フレンド';
+  const slot = $('#typing-slot'); if (slot) slot.innerHTML = on ? `<div class="msg them g-single"><span class="m-ava">${ava(c.peer, 28)}</span><div class="typing"><i></i><i></i><i></i></div></div>` : '';
+  const sub = $('#chat-sub'); if (sub) sub.textContent = on ? '入力中…' : (c.peer.bio || 'フレンド');
   if (on) { const b = $('#chat'); if (b.scrollHeight - b.scrollTop - b.clientHeight < 160) b.scrollTop = b.scrollHeight; }
 }
 async function chatSend(song) {
   const c = S.chat; if (!c) return;
   const inp = $('#chat-in'); const body = song ? '' : inp.value.trim();
   if (!body && !song) return;
-  if (!song) { inp.value = ''; inp.style.height = 'auto'; $('#chat-send').disabled = true; }
+  if (!song) { inp.value = ''; inp.style.height = 'auto'; $('#chat-send').disabled = true; $('.ig-pill')?.classList.remove('typing'); inp.focus(); }
   const tmp = { id: 'tmp' + Date.now(), sender: api.uid, receiver: c.peer.id, body, song: song || null, created_at: new Date().toISOString(), _pending: true };
   c.msgs.push(tmp); drawChat(true); buzz(6);
   try {

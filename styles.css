@@ -594,3 +594,50 @@ body[data-tab="listen"] #mini{display:none;}
   .listen-ring.xl{width:64px;height:64px;right:-10px;bottom:-10px;} .listen-ring.xl .play{width:54px;height:54px;}
 }
 @media (max-height:600px){ .sl-art{width:min(56vw,26vh);} .sl-mood{display:none;} }
+
+/* ═════════ DM（インスタ風） ═════════ */
+#pg-chat{top:var(--vvt,0px);bottom:auto;height:var(--vvh,100%);}
+.ig-hd{display:flex;align-items:center;gap:6px;padding:calc(var(--sat) + 6px) 10px 8px 6px;border-bottom:1px solid var(--ln);background:var(--bg);flex-shrink:0;}
+body.kb-open .ig-hd{padding-top:8px;}
+.ig-who{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;padding:4px 0;}
+.ig-who span{display:flex;flex-direction:column;min-width:0;}
+.ig-who b{font-size:15.5px;}
+.ig-who small{font-size:11.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ig-gift{width:42px;height:42px;background:none;border:none;}
+.chat.ig{padding:12px 12px 10px;gap:0;}
+.chat.ig .day{align-self:center;font-size:11.5px;color:var(--tx3);margin:16px 0 8px;font-weight:500;}
+.chat.ig .msg{max-width:80%;flex-direction:row;align-items:flex-end;gap:8px;margin-top:2px;}
+.chat.ig .msg.g-single,.chat.ig .msg.g-first{margin-top:8px;}
+.chat.ig .msg.me{align-self:flex-end;}
+.chat.ig .msg.them{align-self:flex-start;}
+.m-ava{width:28px;flex-shrink:0;}
+.m-col{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.msg.me .m-col{align-items:flex-end;}
+.chat.ig .bub{padding:10px 14px;border-radius:22px;font-size:15px;line-height:1.45;}
+.chat.ig .me .bub{background:linear-gradient(135deg,#7C5CFF,#A26BFF);color:#fff;}
+.chat.ig .them .bub{background:#26262b;color:var(--tx);}
+.chat.ig .me.g-first .bub{border-bottom-right-radius:6px;}
+.chat.ig .me.g-mid .bub{border-top-right-radius:6px;border-bottom-right-radius:6px;}
+.chat.ig .me.g-last .bub{border-top-right-radius:6px;}
+.chat.ig .them.g-first .bub{border-bottom-left-radius:6px;}
+.chat.ig .them.g-mid .bub{border-top-left-radius:6px;border-bottom-left-radius:6px;}
+.chat.ig .them.g-last .bub{border-top-left-radius:6px;}
+.chat.ig .mcard{width:230px;border-radius:20px;background:#1c1c20;border:1px solid var(--ln2);}
+.chat.ig .msg .st{font-size:11px;color:var(--rs);margin:2px 6px;}
+.seen{align-self:flex-end;font-size:11px;color:var(--tx3);margin:4px 4px 0;}
+.chat.ig .rxmsg{margin:10px 0 4px;background:none;border:none;color:var(--tx3);font-size:11.5px;}
+.chat.ig .typing{margin:0;background:#26262b;border-radius:22px;}
+.ig-empty{margin:auto;display:flex;flex-direction:column;align-items:center;text-align:center;padding:30px;}
+.ig-empty b{font-size:18px;margin-top:12px;}
+.ig-empty small{font-size:12.5px;color:var(--tx2);margin-top:2px;}
+.ig-empty p{font-size:13px;color:var(--tx3);margin-top:14px;}
+.ig-bar{flex-shrink:0;padding:6px 10px calc(var(--sab) + 8px);background:var(--bg);}
+body.kb-open .ig-bar{padding-bottom:8px;}
+.ig-pill{display:flex;align-items:flex-end;gap:6px;min-height:50px;padding:5px 6px 5px 5px;border-radius:26px;background:#1d1d22;border:1px solid var(--ln2);}
+.ig-song{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;background:linear-gradient(135deg,#7C5CFF,#A26BFF);color:#fff;}
+.ig-pill textarea{flex:1;min-width:0;min-height:40px;max-height:120px;padding:9px 4px 9px 6px;background:none;border:none;outline:none;resize:none;font:inherit;font-size:16px;line-height:1.4;color:var(--tx);}
+.ig-pill textarea::placeholder{color:var(--tx3);}
+.ig-send{height:40px;padding:0 12px;font-size:15px;font-weight:700;color:#A88BFF;display:none;flex-shrink:0;}
+.ig-pill.typing .ig-send{display:block;}
+.ig-send[disabled]{opacity:.4;}
+body.chat-open #mini{display:none;}
