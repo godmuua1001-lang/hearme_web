@@ -5,7 +5,7 @@ import { api, LIVE, errText } from './api.js';
 import * as music from './music.js';
 import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 
-const VERSION = '10.3.0';
+const VERSION = '10.3.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -808,7 +808,7 @@ function renderComposer() {
       <div class="ai-hd">${I.spark}<b>この気分に合う3曲</b><small>AI</small></div>
       <div class="row" style="gap:8px"><input class="inp" id="ai-q" maxlength="100" placeholder="例：雨の帰り道" value="${esc(C.ai.q)}" enterkeyhint="go" autocomplete="off"><button class="btn p ai-btn" data-act="ai-go" ${C.ai.loading ? 'disabled' : ''}>${C.ai.loading ? '<span class="spin"></span>' : 'えらび直す'}</button></div>
       <div id="ai-res">${aiResults()}</div>
-      <div class="ai-note">気分の言葉は選曲のためAI（${LIVE ? 'Google Gemini' : 'デモ'}）に送られます。名前など個人が分かることは書かないでね</div></div>
+      <div class="ai-note">この3曲は人ではなくAI（${LIVE ? 'Anthropic Claude' : 'デモ'}）が選んでいます。気分の名前と書き足したひとことが送られます。名前など個人が分かることは書かないでね</div></div>
     <div class="or">または自分で探す</div>
     <div class="srch">${I.search}<input id="cmp-q" placeholder="曲名・アーティスト名" value="${esc(C.q)}" enterkeyhint="search" autocomplete="off"><span id="cmp-spin"></span></div>
     <div id="cmp-res" style="padding-top:6px">${C.results.map((s, i) => resRow(s, i)).join('')}</div>`;
@@ -846,6 +846,7 @@ async function askAI() {
   C.ai.loading = true; C.ai.err = ''; renderAI();
   try {
     const r = await api.recommend(text);
+    if (r?.care) { C.ai.loading = false; C.ai.songs = []; C.ai.err = 'つらいときは、ひとりで抱えないでね。相談できる窓口があります'; renderAI(); careSheet(); return; }
     C.ai.songs = r.songs || []; C.ai.left = r.left ?? C.ai.left;
     remember2(C.ai.songs);
     if (!C.ai.songs.length) C.ai.err = 'ぴったりの曲が見つかりませんでした。ひとこと足して、もう一度ためしてね';
