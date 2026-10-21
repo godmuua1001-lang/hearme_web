@@ -48,6 +48,8 @@ revoke all on function public.start_listen(uuid), public.mark_listened(uuid) fro
 grant execute on function public.start_listen(uuid), public.mark_listened(uuid) to authenticated;
 
 -- ② 招待コードはフレンドからも見えないようにする（本人だけ my_code() で読む）
+-- 招待コードを作る関数は、コードの重複チェックで profiles を読むので「関数の持ち主の権限」で動かす
+alter function public.gen_code() security definer;
 revoke select on public.profiles from anon, authenticated;
 grant select (id, name, emoji, avatar, bio, created_at, fav_songs) on public.profiles to authenticated;
 create or replace function public.my_code() returns text
