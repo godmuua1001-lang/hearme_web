@@ -7,7 +7,7 @@ import { VAPID_PUBLIC_KEY, GOOGLE_LOGIN } from './config.js';
 import * as CFG from './config.js';
 const AI_ON = CFG.AI_ENABLED !== false && CFG.AI_ENABLED !== undefined ? true : false;
 
-const VERSION = '10.5.1';
+const VERSION = '10.5.2';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

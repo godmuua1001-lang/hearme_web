@@ -35,6 +35,9 @@ export function errText(e) {
   return m || 'エラーが発生しました';
 }
 
+// 実機テスト用：URLに ?hmtest=start2 や ?hmtest=mark3 を付けると、その回数だけ通信失敗をわざと起こす（この端末のこのタブだけ。タブを閉じると元に戻る）
+const HMTEST = (() => { try { const v = new URLSearchParams(location.search).get('hmtest') || sessionStorage.getItem('hm_test') || ''; if (v) sessionStorage.setItem('hm_test', v); const m = v.match(/^(start|mark)(\d)$/); return m ? { kind: m[1], left: +m[2] } : null; } catch { return null; } })();
+const fakeFail = kind => { if (HMTEST && HMTEST.kind === kind && HMTEST.left > 0) { HMTEST.left--; console.info('[hmtest] わざと失敗', kind, '残り', HMTEST.left); return true; } return false; };
 const PCOLS = 'id,name,emoji,avatar,bio,created_at,fav_songs';
 const pairKey = (a, b) => [a, b].sort().join('_');
 
@@ -171,7 +174,7 @@ class LiveAPI {
   // 「聴きはじめた」をサーバーに記録。通信が不安定でも届くよう、最大3回まで送り直す
   async startListen(postId) {
     for (let i = 0; i < 3; i++) {
-      try { const { error } = await this.sb.rpc('start_listen', { p_post: postId }); if (!error) return true; } catch { /* 通信失敗 */ }
+      try { if (fakeFail('start')) throw new Error('test'); const { error } = await this.sb.rpc('start_listen', { p_post: postId }); if (!error) return true; } catch { /* 通信失敗 */ }
       await new Promise(r => setTimeout(r, 1000 * (i + 1)));
     }
     return false;
@@ -179,6 +182,7 @@ class LiveAPI {
   async markListened(postId) {
     // サーバーは「聴きはじめてから14秒」を確かめる。まだなら少し待ってもう一度
     for (let i = 0; i < 3; i++) {
+      if (fakeFail('mark')) throw new Error('Failed to fetch (test)');
       const r = this._r(await this.sb.rpc('mark_listened', { p_post: postId }));
       if (!r?.wait) return r;
       await new Promise(res => setTimeout(res, 2000));
